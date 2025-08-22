@@ -3,6 +3,7 @@ package log
 import (
 	"sync"
 
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log/tag"
 )
 
@@ -41,6 +42,10 @@ func (l *lazyLogger) Warn(msg string, tags ...tag.Tag) {
 
 func (l *lazyLogger) Error(msg string, tags ...tag.Tag) {
 	l.once.Do(l.tagLogger)
+	// Ensure error code is present for all error logs
+	if !hasErrorCode(tags) {
+		tags = append(tags, tag.ErrorCode(errorcode.CommonLogMigrationOperationFailed))
+	}
 	l.logger.Error(msg, tags...)
 }
 
@@ -61,4 +66,13 @@ func (l *lazyLogger) Fatal(msg string, tags ...tag.Tag) {
 
 func (l *lazyLogger) tagLogger() {
 	l.logger = With(l.logger, l.tagFn()...)
+}
+
+func hasErrorCode(tags []tag.Tag) bool {
+	for _, t := range tags {
+		if t.Key() == "error-code" {
+			return true
+		}
+	}
+	return false
 }

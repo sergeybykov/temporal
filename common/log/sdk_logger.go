@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"go.temporal.io/sdk/log"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log/tag"
 )
 
@@ -67,7 +68,9 @@ func (l *SdkLogger) Warn(msg string, keyvals ...interface{}) {
 }
 
 func (l *SdkLogger) Error(msg string, keyvals ...interface{}) {
-	l.logger.Error(msg, l.tags(keyvals)...)
+	tags := l.tags(keyvals)
+	tags = append(tags, tag.ErrorCode(errorcode.CommonLogMigrationOperationFailed))
+	l.logger.Error(msg, tags...)
 }
 
 func (l *SdkLogger) With(keyvals ...interface{}) log.Logger {
