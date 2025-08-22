@@ -1,0 +1,113 @@
+# Example CI integration for error code generation and validation
+# This can be adapted for GitHub Actions, Jenkins, or other CI systems
+
+name: Error Code Validation
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  error-codes:
+    name: Error Code Generation and Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.21'
+        
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+          
+    - name: Generate error codes
+      run: make generate-error-codes
+      
+    - name: Verify error codes
+      run: make verify-error-codes
+      
+    - name: Check for uncommitted changes
+      run: |
+        if [[ -n $(git status --porcelain) ]]; then
+          echo "Error: Generated error codes are out of date"
+          echo "Please run 'make generate-error-codes' and commit the changes"
+          git diff
+          exit 1
+        fi
+        
+    # Optional: Test error code compilation
+    - name: Test error code compilation
+      run: go build ./common/errorcode/
+      
+    # Optional: Run error code integration tests
+    - name: Run error code tests
+      run: go test ./common/errorcode/ -v
+
+  # Example job for pull request comments
+  error-code-stats:
+    name: Error Code Statistics
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.21'
+        
+    - name: Generate error code statistics
+      run: |
+        make generate-error-codes
+        echo "## Error Code Statistics" > stats.md
+        echo "" >> stats.md
+        go run cmd/tools/errorcodegen/main.go -scan -output /tmp/codes.go 2>&1 | \
+          grep "Found\|Generated\|Service Error Codes" >> stats.md
+        
+    # This would post statistics to the PR (requires additional setup)
+    # - name: Comment PR with statistics
+    #   uses: actions/github-script@v6
+    #   with:
+    #     script: |
+    #       const fs = require('fs');
+    #       const stats = fs.readFileSync('stats.md', 'utf8');
+    #       github.rest.issues.createComment({
+    #         issue_number: context.issue.number,
+    #         owner: context.repo.owner,
+    #         repo: context.repo.repo,
+    #         body: stats
+    #       });
+
+# Example Makefile integration check
+validate-makefile-integration:
+  name: Validate Makefile Integration
+  runs-on: ubuntu-latest
+  
+  steps:
+  - name: Checkout code
+    uses: actions/checkout@v3
+    
+  - name: Test all error code targets
+    run: |
+      # Test that all targets work
+      make generate-error-codes-force
+      make verify-error-codes
+      make clean-error-codes
+      make generate-error-codes
+      
+      # Test integration with main targets
+      make go-generate
+      make check
