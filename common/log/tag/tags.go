@@ -51,6 +51,21 @@ func IsRetryable(isRetryable bool) ZapTag {
 	return NewBoolTag("is-retryable", isRetryable)
 }
 
+// ErrorCode creates a tag for error codes
+func ErrorCode(code int) ZapTag {
+	return NewInt("error-code", code)
+}
+
+// ErrorComponent creates a tag for error component
+func ErrorComponent(component string) ZapTag {
+	return NewStringTag("error-component", component)
+}
+
+// ErrorSeverity creates a tag for error severity
+func ErrorSeverity(severity string) ZapTag {
+	return NewStringTag("error-severity", severity)
+}
+
 // ClusterName returns tag for ClusterName
 func ClusterName(clusterName string) ZapTag {
 	return NewStringTag("cluster-name", clusterName)
