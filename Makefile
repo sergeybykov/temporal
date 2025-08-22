@@ -20,8 +20,17 @@ ci-build-misc: \
 	gomodtidy \
 	ensure-no-changes
 
+# Generate unique error codes for all error logging locations (incremental).
+generate-error-codes: 
+
+# Force regenerate error codes even if source files haven't changed.
+generate-error-codes-force:
+
+# Verify error codes for conflicts and range violations.
+verify-error-codes:
+
 # Delete all build artifacts
-clean: clean-bins clean-tools clean-test-output
+clean: clean-bins clean-tools clean-test-output clean-error-codes
 
 # Recompile proto files.
 proto: lint-protos lint-api protoc proto-codegen
@@ -402,7 +411,7 @@ workflowcheck: $(WORKFLOWCHECK)
 		$(WORKFLOWCHECK) "$$dir" ; \
 	done
 
-check: lint shell-check
+check: lint shell-check verify-error-codes
 
 ##### Tests #####
 clean-test-output:
@@ -643,7 +652,27 @@ update-dependencies-major: $(GOMAJOR)
 	@$(GOMAJOR) get -major all
 	@go mod tidy
 
-go-generate: $(MOCKGEN) $(GOIMPORTS) $(STRINGER) $(GOWRAP)
+# Error code generation targets
+.PHONY: generate-error-codes verify-error-codes generate-error-codes-force clean-error-codes
+generate-error-codes:
+	@printf $(COLOR) "Checking and generating error codes (incremental)..."
+	@./cmd/tools/errorcodegen/check_and_generate.sh
+
+generate-error-codes-force:
+	@printf $(COLOR) "Generating error codes (force)..."
+	@rm -f common/errorcode/generated_codes.go.checksum
+	@go run cmd/tools/errorcodegen/main.go -scan -output common/errorcode/generated_codes.go
+	@find service/ common/ client/ -name "*.go" -not -name "*_test.go" -not -path "*/generated_codes.go" 2>/dev/null | sort | xargs sha256sum 2>/dev/null | sha256sum | cut -d' ' -f1 > common/errorcode/generated_codes.go.checksum
+
+verify-error-codes:
+	@printf $(COLOR) "Verifying error codes..."
+	@go run cmd/tools/errorcodegen/main.go -verify
+
+clean-error-codes:
+	@printf $(COLOR) "Cleaning generated error codes..."
+	@rm -f common/errorcode/generated_codes.go common/errorcode/generated_codes.go.checksum
+
+go-generate: $(MOCKGEN) $(GOIMPORTS) $(STRINGER) $(GOWRAP) generate-error-codes
 	@printf $(COLOR) "Process go:generate directives..."
 	@go generate ./...
 
