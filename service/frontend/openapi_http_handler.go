@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"go.temporal.io/api/temporalproto/openapi"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/rpc/interceptor"
@@ -40,15 +41,15 @@ func (h *OpenAPIHTTPHandler) RegisterRoutes(r *mux.Router) {
 
 			rdr, err := gzip.NewReader(bytes.NewReader(spec))
 			if err != nil {
-				h.logger.Error("failed to initialize openapi spec reader", tag.NewInt("version", version), tag.Error(err))
+				log.ErrorWithCode(h.logger, errorcode.FrontendOpenAPISpecReaderInitFailed, "failed to initialize openapi spec reader", err, tag.NewInt("version", version))
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 			if _, err := io.Copy(w, rdr); err != nil {
-				h.logger.Error("failed to send openapi spec", tag.NewInt("version", version), tag.Error(err))
+				log.ErrorWithCode(h.logger, errorcode.FrontendOpenAPISpecSendFailed, "failed to send openapi spec", err, tag.NewInt("version", version))
 			}
 			if err := rdr.Close(); err != nil {
-				h.logger.Error("failed to verify openapi spec checksum", tag.NewInt("version", version), tag.Error(err))
+				log.ErrorWithCode(h.logger, errorcode.FrontendOpenAPISpecChecksumVerificationFailed, "failed to verify openapi spec checksum", err, tag.NewInt("version", version))
 			}
 		}
 	}

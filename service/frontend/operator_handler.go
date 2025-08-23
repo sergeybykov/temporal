@@ -20,6 +20,7 @@ import (
 	"go.temporal.io/server/client/frontend"
 	"go.temporal.io/server/common"
 	clustermetadata "go.temporal.io/server/common/cluster"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -211,7 +212,7 @@ func (h *OperatorHandlerImpl) addSearchAttributesElasticsearch(
 		if !currentSearchAttributes.IsDefined(saName) {
 			customAttributesToAdd[saName] = saType
 		} else {
-			h.logger.Warn(
+			log.WarnWithCode(h.logger, errorcode.FrontendSearchAttributesGetFailed,
 				fmt.Sprintf(errSearchAttributeAlreadyExistsMessage, saName),
 				tag.NewStringTag(visibilityIndexNameTagName, indexName),
 				tag.NewStringTag(visibilitySearchAttributeTagName, saName),
@@ -279,7 +280,7 @@ func (h *OperatorHandlerImpl) addSearchAttributesSQL(
 	for saName, saType := range request.GetSearchAttributes() {
 		// check if alias is already in use
 		if _, ok := aliasToFieldMap[saName]; ok {
-			h.logger.Warn(
+			log.WarnWithCode(h.logger, errorcode.FrontendSearchAttributesGetFailed,
 				fmt.Sprintf(errSearchAttributeAlreadyExistsMessage, saName),
 				tag.NewStringTag(namespaceTagName, nsName),
 				tag.NewStringTag(visibilitySearchAttributeTagName, saName),

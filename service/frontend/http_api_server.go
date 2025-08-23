@@ -19,6 +19,7 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -306,7 +307,7 @@ func (h *HTTPAPIServer) errorHandler(
 	sProto := s.Proto()
 	buf, merr := marshaler.Marshal(sProto)
 	if merr != nil {
-		h.logger.Warn("Failed to marshal error message", tag.Error(merr))
+		log.WarnWithCode(h.logger, errorcode.FrontendFrontendHttpapiserverFailed, "Failed to marshal error message", tag.Error(merr))
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte(`{"code": 13, "message": "failed to marshal error message"}`))

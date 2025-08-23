@@ -24,6 +24,7 @@ import (
 	"go.temporal.io/server/common/authorization"
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -92,7 +93,7 @@ func (c *operationContext) capturePanicAndRecordMetrics(ctxPtr *context.Context,
 
 		st := string(debug.Stack())
 
-		c.logger.Error("Panic captured", tag.SysStackTrace(st), tag.Error(err))
+		log.ErrorWithCode(c.logger, errorcode.FrontendNexusOperationPanicCaptured, "Panic captured", err, tag.SysStackTrace(st))
 		*errPtr = err
 	}
 
@@ -410,11 +411,11 @@ func (h *nexusHandler) StartOperation(
 
 	// Transform nexus Content to temporal Payload with common/nexus PayloadSerializer.
 	if err = input.Consume(&startOperationRequest.Payload); err != nil {
-		oc.logger.Warn("invalid input", tag.Error(err))
+		log.WarnWithCode(oc.logger, errorcode.FrontendFrontendNexushandlerInvalidOperationFailed, "invalid input", tag.Error(err))
 		return nil, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "invalid input")
 	}
 	if startOperationRequest.Payload.Size() > h.payloadSizeLimit(oc.namespaceName) {
-		oc.logger.Error("payload size exceeds error limit for Nexus StartOperation request", tag.Operation(operation), tag.WorkflowNamespace(oc.namespaceName))
+		log.ErrorWithCode(oc.logger, errorcode.FrontendNexusPayloadSizeExceedsLimit, "payload size exceeds error limit for Nexus StartOperation request", nil, tag.Operation(operation), tag.WorkflowNamespace(oc.namespaceName))
 		return nil, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "input exceeds size limit")
 	}
 
@@ -489,7 +490,7 @@ func parseLinks(links []*nexuspb.Link, logger log.Logger) []nexus.Link {
 		if err != nil {
 			// TODO(rodrigozhou): links are non-essential for the execution of the workflow,
 			// so ignoring the error for now; we will revisit how to handle these errors later.
-			logger.Error("failed to parse link url", tag.URL(link.Url), tag.Error(err))
+			log.ErrorWithCode(logger, errorcode.FrontendNexusLinkURLParsingFailed, "failed to parse link url", err, tag.URL(link.Url))
 			continue
 		}
 		nexusLinks = append(nexusLinks, nexus.Link{
@@ -535,7 +536,7 @@ func (h *nexusHandler) forwardStartOperation(
 
 	resp, err := client.StartOperation(ctx, operation, input.Reader, options)
 	if err != nil {
-		oc.logger.Error("received error from remote cluster for forwarded Nexus start operation request.", tag.Error(err))
+		log.ErrorWithCode(oc.logger, errorcode.FrontendNexusForwardedStartOperationFailed, "received error from remote cluster for forwarded Nexus start operation request", err)
 		oc.metricsHandler = oc.metricsHandler.WithTags(metrics.OutcomeTag("forwarded_request_error"))
 		return nil, err
 	}
@@ -626,7 +627,7 @@ func (h *nexusHandler) forwardCancelOperation(
 
 	handle, err := client.NewHandle(operation, id)
 	if err != nil {
-		oc.logger.Warn("invalid Nexus cancel operation.", tag.Error(err))
+		log.WarnWithCode(oc.logger, errorcode.FrontendFrontendNexushandlerInvalidOperationFailed2, "invalid Nexus cancel operation.", tag.Error(err))
 		return nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "invalid operation")
 	}
 
@@ -647,7 +648,7 @@ func (h *nexusHandler) forwardCancelOperation(
 
 	err = handle.Cancel(ctx, options)
 	if err != nil {
-		oc.logger.Error("received error from remote cluster for forwarded Nexus cancel operation request.", tag.Error(err))
+		log.ErrorWithCode(oc.logger, errorcode.FrontendNexusForwardedCancelOperationFailed, "received error from remote cluster for forwarded Nexus cancel operation request", err)
 		oc.metricsHandler = oc.metricsHandler.WithTags(metrics.OutcomeTag("forwarded_request_error"))
 		return err
 	}
@@ -658,7 +659,7 @@ func (h *nexusHandler) forwardCancelOperation(
 func (h *nexusHandler) nexusClientForActiveCluster(oc *operationContext, service string) (*nexus.HTTPClient, error) {
 	httpClient, err := h.forwardingClients.Get(oc.namespace.ActiveClusterName())
 	if err != nil {
-		oc.logger.Error("failed to forward Nexus request. error creating HTTP client", tag.Error(err), tag.SourceCluster(oc.namespace.ActiveClusterName()), tag.TargetCluster(oc.namespace.ActiveClusterName()))
+		log.ErrorWithCode(oc.logger, errorcode.FrontendNexusHTTPClientCreationFailed, "failed to forward Nexus request. error creating HTTP client", err, tag.SourceCluster(oc.namespace.ActiveClusterName()), tag.TargetCluster(oc.namespace.ActiveClusterName()))
 		oc.metricsHandler = oc.metricsHandler.WithTags(metrics.OutcomeTag("request_forwarding_failed"))
 		return nil, nexus.HandlerErrorf(nexus.HandlerErrorTypeInternal, "request forwarding failed")
 	}
@@ -685,11 +686,10 @@ func (h *nexusHandler) nexusClientForActiveCluster(oc *operationContext, service
 	}
 
 	if err != nil {
-		oc.logger.Error("failed to forward Nexus request. error constructing ServiceBaseURL",
+		log.ErrorWithCode(oc.logger, errorcode.FrontendNexusServiceBaseURLConstructionFailed, "failed to forward Nexus request. error constructing ServiceBaseURL", err,
 			tag.URL(httpClient.BaseURL()),
 			tag.WorkflowNamespace(oc.namespaceName),
-			tag.WorkflowTaskQueueName(oc.taskQueue),
-			tag.Error(err))
+			tag.WorkflowTaskQueueName(oc.taskQueue))
 		oc.metricsHandler = oc.metricsHandler.WithTags(metrics.OutcomeTag("request_forwarding_failed"))
 		return nil, nexus.HandlerErrorf(nexus.HandlerErrorTypeInternal, "request forwarding failed")
 	}
@@ -730,7 +730,7 @@ func (h *nexusHandler) convertOutcomeToNexusHandlerError(resp *matchingservice.D
 		nexus.HandlerErrorTypeInternal:
 		return handlerError
 	default:
-		h.logger.Warn("received unknown or unset Nexus handler error type", tag.Value(handlerError.Type))
+		log.WarnWithCode(h.logger, errorcode.FrontendNexusEndpointClientGenericError, "received unknown or unset Nexus handler error type", tag.Value(handlerError.Type))
 		return nexus.HandlerErrorf(nexus.HandlerErrorTypeInternal, "internal error")
 	}
 }

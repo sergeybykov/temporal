@@ -6,6 +6,7 @@ import (
 
 	enumsspb "go.temporal.io/server/api/enums/v1"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/membership"
@@ -64,7 +65,7 @@ func (h *healthCheckerImpl) Check(ctx context.Context) (enumsspb.HealthState, er
 				hostAddress,
 			)
 			if err != nil {
-				h.logger.Warn("failed to ping deep health check", tag.Error(err), tag.ServerName(string(h.serviceName)))
+				log.WarnWithCode(h.logger, errorcode.FrontendInvalidRequestFormat, "failed to ping deep health check", tag.Error(err), tag.ServerName(string(h.serviceName)))
 			}
 			receiveCh <- resp
 		}(host.GetAddress())
@@ -90,13 +91,13 @@ func (h *healthCheckerImpl) Check(ctx context.Context) (enumsspb.HealthState, er
 
 	hostDeclinedServingProportion := hostDeclinedServingCount / float64(len(hosts))
 	if hostDeclinedServingProportion > proportionOfDeclinedServiceHosts {
-		h.logger.Warn("health check exceeded host declined serving proportion threshold", tag.NewFloat64("host declined serving proportion threshold", proportionOfDeclinedServiceHosts))
+		log.WarnWithCode(h.logger, errorcode.FrontendInvalidRequestFormat, "health check exceeded host declined serving proportion threshold", tag.NewFloat64("host declined serving proportion threshold", proportionOfDeclinedServiceHosts))
 		return enumsspb.HEALTH_STATE_DECLINED_SERVING, nil
 	}
 
 	failedHostCountProportion := failedHostCount / float64(len(hosts))
 	if failedHostCountProportion+hostDeclinedServingProportion > h.hostFailurePercentage() {
-		h.logger.Warn("health check exceeded host failure percentage threshold", tag.NewFloat64("host failure percentage threshold", h.hostFailurePercentage()), tag.NewFloat64("host failure percentage", failedHostCountProportion), tag.NewFloat64("host declined serving percentage", hostDeclinedServingProportion))
+		log.WarnWithCode(h.logger, errorcode.FrontendInvalidRequestFormat, "health check exceeded host failure percentage threshold", tag.NewFloat64("host failure percentage threshold", h.hostFailurePercentage()), tag.NewFloat64("host failure percentage", failedHostCountProportion), tag.NewFloat64("host declined serving percentage", hostDeclinedServingProportion))
 		return enumsspb.HEALTH_STATE_NOT_SERVING, nil
 	}
 

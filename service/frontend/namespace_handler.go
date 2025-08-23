@@ -20,6 +20,7 @@ import (
 	"go.temporal.io/server/common/archiver/provider"
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/cluster"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
@@ -260,6 +261,7 @@ func (d *namespaceHandler) RegisterNamespace(
 	}
 
 	d.logger.Info("Register namespace succeeded",
+		tag.ErrorCode(errorcode.FrontendNamespaceOpFailed),
 		tag.WorkflowNamespace(registerRequest.GetNamespace()),
 		tag.WorkflowNamespaceID(namespaceResponse.ID),
 	)
@@ -605,6 +607,7 @@ func (d *namespaceHandler) UpdateNamespace(
 	response.NamespaceInfo, response.Config, response.ReplicationConfig, _ = d.createResponse(info, config, replicationConfig)
 
 	d.logger.Info("Update namespace succeeded",
+		tag.ErrorCode(errorcode.FrontendNamespaceOpFailed),
 		tag.WorkflowNamespace(info.Name),
 		tag.WorkflowNamespaceID(info.Id),
 	)
@@ -748,6 +751,7 @@ func (d *namespaceHandler) removeOldestExpiredWorkflowRule(nsName string, rules 
 	if found {
 		d.logger.Info(
 			"Removed expired workflow rule",
+			tag.ErrorCode(errorcode.FrontendNamespaceOpFailed),
 			tag.WorkflowRuleID(oldestKey),
 			tag.WorkflowNamespace(nsName),
 		)
