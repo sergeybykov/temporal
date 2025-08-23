@@ -12,6 +12,7 @@ import (
 	"go.temporal.io/server/client"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/cluster"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/goro"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
@@ -216,7 +217,7 @@ func (r *Replicator) cleanupNamespaceReplicationQueue(
 			var err error
 			deletedMessageID, err = r.cleanupAckedMessages(ctx, deletedMessageID)
 			if err != nil {
-				r.logger.Warn("Failed to cleanup acked messages on namespace replication queue", tag.Error(err))
+				log.WarnWithCode(r.logger, errorcode.WorkerSDKNonRetryableError, "Failed to cleanup acked messages on namespace replication queue", tag.Error(err))
 			}
 		}
 	}

@@ -9,6 +9,8 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/service/worker/scanner/executions"
 	"go.temporal.io/server/service/worker/scanner/history"
@@ -116,7 +118,7 @@ func HistoryScavengerActivity(
 	hbd := history.ScavengerHeartbeatDetails{}
 	if activity.HasHeartbeatDetails(activityCtx) {
 		if err := activity.GetHeartbeatDetails(activityCtx, &hbd); err != nil {
-			ctx.logger.Error("Failed to recover from last heartbeat, start over from beginning", tag.Error(err))
+			log.ErrorWithCode(ctx.logger, errorcode.WorkerScannerHeartbeatRecoveryFailed, "Failed to recover from last heartbeat, start over from beginning", err)
 		}
 	}
 

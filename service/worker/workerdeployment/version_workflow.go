@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 	deploymentspb "go.temporal.io/server/api/deployment/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/searchattribute"
@@ -143,7 +144,7 @@ func (d *VersionWorkflowRunner) run(ctx workflow.Context) error {
 
 	// Set up Query Handlers here:
 	if err := workflow.SetQueryHandler(ctx, QueryDescribeVersion, d.handleDescribeQuery); err != nil {
-		d.logger.Error("Failed while setting up query handler")
+		d.logger.Error("Failed while setting up query handler", tag.ErrorCode(errorcode.WorkerDeploymentQueryHandlerSetupFailed))
 		return err
 	}
 
@@ -286,7 +287,7 @@ func (d *VersionWorkflowRunner) handleDeleteVersion(ctx workflow.Context, args *
 	// use lock to enforce only one update at a time
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", tag.ErrorCode(errorcode.WorkerDeploymentWorkflowLockAcquisitionFailed))
 		return serviceerror.NewDeadlineExceeded("Could not acquire workflow lock")
 	}
 	defer func() {
@@ -299,7 +300,7 @@ func (d *VersionWorkflowRunner) handleDeleteVersion(ctx workflow.Context, args *
 	// wait until deployment workflow started
 	err = workflow.Await(ctx, func() bool { return d.VersionState.StartedDeploymentWorkflow })
 	if err != nil {
-		d.logger.Error("Update canceled before worker deployment workflow started")
+		d.logger.Error("Update canceled before worker deployment workflow started", tag.ErrorCode(errorcode.WorkerDeploymentUpdateCanceledBeforeStart))
 		return serviceerror.NewDeadlineExceeded("Update canceled before worker deployment workflow started")
 	}
 
@@ -417,7 +418,7 @@ func (d *VersionWorkflowRunner) handleRegisterWorker(ctx workflow.Context, args 
 	// use lock to enforce only one update at a time
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", tag.ErrorCode(errorcode.WorkerDeploymentWorkflowLockAcquisitionFailed))
 		return err
 	}
 	defer func() {
@@ -496,7 +497,7 @@ func (d *VersionWorkflowRunner) handleSyncState(ctx workflow.Context, args *depl
 	// use lock to enforce only one update at a time
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", tag.ErrorCode(errorcode.WorkerDeploymentWorkflowLockAcquisitionFailed))
 		return nil, serviceerror.NewDeadlineExceeded("Could not acquire workflow lock")
 	}
 	defer func() {
@@ -509,7 +510,7 @@ func (d *VersionWorkflowRunner) handleSyncState(ctx workflow.Context, args *depl
 	// wait until deployment workflow started
 	err = workflow.Await(ctx, func() bool { return d.VersionState.StartedDeploymentWorkflow })
 	if err != nil {
-		d.logger.Error("Update canceled before worker deployment workflow started")
+		d.logger.Error("Update canceled before worker deployment workflow started", tag.ErrorCode(errorcode.WorkerDeploymentUpdateCanceledBeforeStart))
 		return nil, serviceerror.NewDeadlineExceeded("Update canceled before worker deployment workflow started")
 	}
 
@@ -605,7 +606,7 @@ func (d *VersionWorkflowRunner) syncSummary(ctx workflow.Context) {
 		},
 	).Get(ctx, nil)
 	if err != nil {
-		d.logger.Error("could not sync version summary to deployment workflow", "error", err)
+		d.logger.Error("could not sync version summary to deployment workflow", "error", err, tag.ErrorCode(errorcode.WorkerDeploymentVersionWorkflowExecutionFailed))
 	}
 }
 
@@ -631,13 +632,13 @@ func (d *VersionWorkflowRunner) refreshDrainageInfo(ctx workflow.Context) {
 		interval, err = getSafeDurationConfig(ctx, "getDrainageRefreshInterval", d.unsafeRefreshIntervalGetter, defaultVisibilityRefresh)
 	}
 	if err != nil {
-		d.logger.Error("could not calculate drainage refresh interval", tag.Error(err))
+		d.logger.Error("could not calculate drainage refresh interval", tag.Error(err), tag.ErrorCode(errorcode.WorkerDeploymentVersionCheckFailed))
 		return
 	}
 	timeSinceLastRefresh := workflow.Now(ctx).Sub(drainage.LastCheckedTime.AsTime())
 	if interval > timeSinceLastRefresh {
 		if err = workflow.Sleep(ctx, interval-timeSinceLastRefresh); err != nil {
-			d.logger.Error("error while trying to sleep", tag.Error(err))
+			d.logger.Error("error while trying to sleep", tag.Error(err), tag.ErrorCode(errorcode.WorkerDeploymentVersionPollingFailed))
 			return
 		}
 	}
@@ -651,7 +652,7 @@ func (d *VersionWorkflowRunner) refreshDrainageInfo(ctx workflow.Context) {
 		d.VersionState.Version,
 	).Get(ctx, &newInfo)
 	if err != nil {
-		d.logger.Error("could not get version drainage status", tag.Error(err))
+		d.logger.Error("could not get version drainage status", tag.Error(err), tag.ErrorCode(errorcode.WorkerDeploymentVersionValidationFailed))
 		return
 	}
 
@@ -709,7 +710,7 @@ func (d *VersionWorkflowRunner) updateVersionStatusAfterDrainageStatusChange(ctx
 	if v != workflow.DefaultVersion {
 		err := d.syncVersionStatusAfterDrainageStatusChange(ctx)
 		if err != nil {
-			d.logger.Error("failed to sync version status after drainage status change", "error", err)
+			d.logger.Error("failed to sync version status after drainage status change", "error", err, tag.ErrorCode(errorcode.WorkerDeploymentVersionRegistrationFailed))
 		}
 	}
 
@@ -722,7 +723,7 @@ func (d *VersionWorkflowRunner) updateVersionStatusAfterDrainageStatusChange(ctx
 func (d *VersionWorkflowRunner) syncVersionStatusAfterDrainageStatusChange(ctx workflow.Context) error {
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", tag.ErrorCode(errorcode.WorkerDeploymentWorkflowLockAcquisitionFailed))
 		return serviceerror.NewDeadlineExceeded("Could not acquire workflow lock")
 	}
 

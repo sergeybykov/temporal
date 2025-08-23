@@ -6,6 +6,7 @@ import (
 	"go.temporal.io/sdk/log"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/primitives"
@@ -204,7 +205,7 @@ func DeleteExecutionsWorkflow(ctx workflow.Context, params DeleteExecutionsParam
 		if result.ErrorCount == 0 {
 			logger.Info("Successfully deleted workflow executions.", tag.DeletedExecutionsCount(result.SuccessCount))
 		} else {
-			logger.Error("Finish deleting workflow executions with some errors.", tag.DeletedExecutionsCount(result.SuccessCount), tag.DeletedExecutionsErrorCount(result.ErrorCount))
+			logger.Error("Finish deleting workflow executions with some errors.", tag.DeletedExecutionsCount(result.SuccessCount), tag.DeletedExecutionsErrorCount(result.ErrorCount), tag.ErrorCode(errorcode.WorkerDeleteNamespaceExecutionsFailed))
 		}
 		return result, nil
 	}

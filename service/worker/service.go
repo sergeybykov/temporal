@@ -10,6 +10,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/membership"
@@ -213,6 +214,7 @@ func NewConfig(
 func (s *Service) Start() {
 	s.logger.Info(
 		"worker starting",
+		tag.ErrorCode(errorcode.WorkerStartupFailed),
 		tag.ComponentWorker,
 	)
 
@@ -242,6 +244,7 @@ func (s *Service) Start() {
 
 	s.logger.Info(
 		"worker service started",
+		tag.ErrorCode(errorcode.WorkerTaskProcessingFailed),
 		tag.ComponentWorker,
 		tag.Address(s.hostInfo.GetAddress()),
 	)
@@ -258,6 +261,7 @@ func (s *Service) Stop() {
 
 	s.logger.Info(
 		"worker service stopped",
+		tag.ErrorCode(errorcode.WorkerShutdownTimeout),
 		tag.ComponentWorker,
 		tag.Address(s.hostInfo.GetAddress()),
 	)
@@ -275,10 +279,9 @@ func (s *Service) startParentClosePolicyProcessor() {
 	}
 	processor := parentclosepolicy.New(params)
 	if err := processor.Start(); err != nil {
-		s.logger.Fatal(
+		log.FatalWithCode(s.logger, errorcode.WorkerStartupFailed,
 			"error starting parentclosepolicy processor",
-			tag.Error(err),
-		)
+			err)
 	}
 }
 
@@ -309,10 +312,9 @@ func (s *Service) initScanner() error {
 
 func (s *Service) startScanner() {
 	if err := s.scanner.Start(); err != nil {
-		s.logger.Fatal(
+		log.FatalWithCode(s.logger, errorcode.WorkerStartupFailed,
 			"error starting scanner",
-			tag.Error(err),
-		)
+			err)
 	}
 }
 
@@ -340,14 +342,12 @@ func (s *Service) ensureSystemNamespaceExists(
 	case nil:
 		// noop
 	case *serviceerror.NamespaceNotFound:
-		s.logger.Fatal(
+		log.FatalWithCode(s.logger, errorcode.WorkerStartupFailed,
 			"temporal-system namespace does not exist",
-			tag.Error(err),
-		)
+			err)
 	default:
-		s.logger.Fatal(
+		log.FatalWithCode(s.logger, errorcode.WorkerStartupFailed,
 			"failed to verify if temporal system namespace exists",
-			tag.Error(err),
-		)
+			err)
 	}
 }

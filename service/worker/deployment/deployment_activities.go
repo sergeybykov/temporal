@@ -10,6 +10,8 @@ import (
 	"go.temporal.io/server/api/matchingservice/v1"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/resource"
+	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 )
 
 type (
@@ -46,7 +48,7 @@ func (a *DeploymentActivities) SyncUserData(ctx context.Context, input *deployme
 				Data:          sync.Data,
 			})
 			if err != nil {
-				logger.Error("syncing task queue userdata", "taskQueue", sync.Name, "type", sync.Type, "error", err)
+				logger.Error("syncing task queue userdata", "taskQueue", sync.Name, "type", sync.Type, "error", err, tag.ErrorCode(errorcode.TaskQueueUserDataSyncFailed))
 			} else {
 				lock.Lock()
 				maxVersionByName[sync.Name] = max(maxVersionByName[sync.Name], res.Version)
@@ -80,7 +82,7 @@ func (a *DeploymentActivities) CheckUserDataPropagation(ctx context.Context, inp
 				Version:     version,
 			})
 			if err != nil {
-				logger.Error("waiting for userdata", "taskQueue", name, "type", version, "error", err)
+				logger.Error("waiting for userdata", "taskQueue", name, "type", version, "error", err, tag.ErrorCode(errorcode.TaskQueueUserDataWaitFailed))
 			}
 			errs <- err
 		}()

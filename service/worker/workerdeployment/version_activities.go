@@ -18,6 +18,8 @@ import (
 	"go.temporal.io/server/api/matchingservice/v1"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/resource"
+	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/worker_versioning"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -84,7 +86,7 @@ func (a *VersionActivities) SyncDeploymentVersionUserData(
 			}
 
 			if err != nil {
-				logger.Error("syncing task queue userdata", "taskQueue", syncData.Name, "types", syncData.Types, "error", err)
+				logger.Error("syncing task queue userdata", "taskQueue", syncData.Name, "types", syncData.Types, "error", err, tag.ErrorCode(errorcode.TaskQueueUserDataSyncFailed))
 			} else {
 				lock.Lock()
 				maxVersionByName[syncData.Name] = max(maxVersionByName[syncData.Name], res.Version)
@@ -118,7 +120,7 @@ func (a *VersionActivities) CheckWorkerDeploymentUserDataPropagation(ctx context
 				Version:     version,
 			})
 			if err != nil {
-				logger.Error("waiting for userdata", "taskQueue", name, "type", version, "error", err)
+				logger.Error("waiting for userdata", "taskQueue", name, "type", version, "error", err, tag.ErrorCode(errorcode.TaskQueueUserDataWaitFailed))
 			}
 			errs <- err
 		}(n, v)
@@ -180,7 +182,7 @@ func (a *VersionActivities) GetVersionDrainageStatus(ctx context.Context, versio
 	logger := activity.GetLogger(ctx)
 	response, err := a.deploymentClient.GetVersionDrainageStatus(ctx, a.namespace, worker_versioning.WorkerDeploymentVersionToStringV31(version))
 	if err != nil {
-		logger.Error("error counting workflows for drainage status", "error", err)
+		logger.Error("error counting workflows for drainage status", "error", err, tag.ErrorCode(errorcode.WorkflowCountForDrainageError))
 		return nil, err
 	}
 	return &deploymentpb.VersionDrainageInfo{

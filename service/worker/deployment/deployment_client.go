@@ -17,6 +17,7 @@ import (
 	"go.temporal.io/server/api/historyservice/v1"
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
@@ -746,8 +747,7 @@ func (d *DeploymentClientImpl) record(operation string, retErr *error, args ...a
 		// TODO: add metrics recording here
 
 		if *retErr != nil {
-			d.logger.Error("deployment client error",
-				tag.Error(*retErr),
+			log.ErrorWithCode(d.logger, errorcode.DeploymentClientError, "deployment client error", *retErr,
 				tag.Operation(operation),
 				tag.NewDurationTag("elapsed", elapsed),
 				tag.NewAnyTag("args", args),
