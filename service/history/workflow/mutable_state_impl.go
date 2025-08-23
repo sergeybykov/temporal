@@ -42,6 +42,7 @@ import (
 	"go.temporal.io/server/common/convert"
 	"go.temporal.io/server/common/definition"
 	"go.temporal.io/server/common/enums"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/failure"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -6058,12 +6059,12 @@ func (ms *MutableStateImpl) StartTransaction(
 	namespaceEntry *namespace.Namespace,
 ) (bool, error) {
 	if ms.IsDirty() {
-		ms.logger.Error("MutableState encountered dirty transaction",
+		log.ErrorWithCode(ms.logger, errorcode.HistoryMutableStateDirtyTransaction,
+			"MutableState encountered dirty transaction", nil,
 			tag.WorkflowNamespaceID(ms.executionInfo.NamespaceId),
 			tag.WorkflowID(ms.executionInfo.WorkflowId),
 			tag.WorkflowRunID(ms.executionState.RunId),
-			tag.Value(ms.hBuilder),
-		)
+			tag.Value(ms.hBuilder))
 		metrics.MutableStateChecksumInvalidated.With(ms.metricsHandler).Record(1)
 		return false, serviceerror.NewUnavailable("MutableState encountered dirty transaction")
 	}
@@ -7506,11 +7507,11 @@ func (ms *MutableStateImpl) logDataInconsistency() {
 	workflowID := ms.executionInfo.WorkflowId
 	runID := ms.executionState.RunId
 
-	ms.logger.Error("encounter cassandra data inconsistency",
+	log.ErrorWithCode(ms.logger, errorcode.HistoryDataInconsistency,
+		"encounter cassandra data inconsistency", nil,
 		tag.WorkflowNamespaceID(namespaceID),
 		tag.WorkflowID(workflowID),
-		tag.WorkflowRunID(runID),
-	)
+		tag.WorkflowRunID(runID))
 }
 
 func (ms *MutableStateImpl) HasCompletedAnyWorkflowTask() bool {

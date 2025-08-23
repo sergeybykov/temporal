@@ -5,6 +5,7 @@ import (
 
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -137,7 +138,7 @@ func (c *workflowSizeChecker) checkCountConstraint(
 		numPending,
 		errLimit,
 	)
-	logger.Error(err.Error(), tag.Error(err))
+	log.ErrorWithCode(logger, errorcode.HistoryWorkflowSizeConstraintViolation, err.Error(), err)
 	return err
 }
 

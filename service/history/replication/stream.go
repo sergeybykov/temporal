@@ -12,6 +12,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/persistence"
 	serviceerrors "go.temporal.io/server/common/serviceerror"
@@ -80,7 +81,7 @@ func WrapEventLoop(
 					metrics.FromClusterIDTag(fromClusterKey.ClusterID),
 					metrics.ToClusterIDTag(toClusterKey.ClusterID),
 				)
-				logger.Error("ReplicationServiceError", tag.Error(err))
+				logger.Error("ReplicationServiceError", tag.Error(err), tag.ErrorCode(errorcode.ReplicationServiceError))
 			}
 			return err
 		}

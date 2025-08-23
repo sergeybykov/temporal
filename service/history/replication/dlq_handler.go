@@ -13,6 +13,7 @@ import (
 	"go.temporal.io/server/client"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/persistence"
 	"go.temporal.io/server/service/history/deletemanager"
@@ -157,7 +158,7 @@ func (r *dlqHandlerImpl) PurgeMessages(
 		sourceCluster,
 		lastMessageID,
 	); err != nil {
-		r.logger.Error("Failed to purge history replication message", tag.Error(err))
+		r.logger.Error("Failed to purge history replication message", tag.Error(err), tag.ErrorCode(errorcode.ReplicationAckLevelUpdateFailed))
 		// The update ack level should not block the call. Ignore the error.
 	}
 	return nil
@@ -217,7 +218,7 @@ func (r *dlqHandlerImpl) MergeMessages(
 		sourceCluster,
 		lastMessageID,
 	); err != nil {
-		r.logger.Error("Failed to purge history replication message", tag.Error(err))
+		r.logger.Error("Failed to purge history replication message", tag.Error(err), tag.ErrorCode(errorcode.ReplicationAckLevelUpdateFailed))
 		// The update ack level should not block the call. Ignore the error.
 	}
 	return token, nil

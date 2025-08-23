@@ -20,6 +20,7 @@ import (
 	"go.temporal.io/server/common/definition"
 	"go.temporal.io/server/common/effect"
 	"go.temporal.io/server/common/failure"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/locks"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -165,9 +166,8 @@ func (handler *WorkflowTaskCompletedHandler) Invoke(
 			// This is NOT 100% bulletproof solution because this write operation may also fail.
 			// TODO: remove this call when GetWorkflowExecutionHistory includes speculative WFT events.
 			if clearStickyErr := handler.clearStickyTaskQueue(ctx, workflowLease.GetContext()); clearStickyErr != nil {
-				handler.logger.Error("Failed to clear stickiness after speculative workflow task failed to complete.",
+				log.ErrorWithCode(handler.logger, errorcode.HistRespondWorkflowTaskCompletedOperationFailed, "Failed to clear stickiness after speculative workflow task failed to complete.", retError,
 					tag.NewErrorTag("clear-sticky-error", clearStickyErr),
-					tag.Error(retError),
 					tag.WorkflowID(token.GetWorkflowId()),
 					tag.WorkflowRunID(token.GetRunId()),
 					tag.WorkflowNamespaceID(namespaceEntry.ID().String()))
@@ -951,13 +951,11 @@ func (handler *WorkflowTaskCompletedHandler) handleBufferedQueries(
 				Err:  err,
 			}
 			if err := queryRegistry.SetCompletionState(id, failedCompletionState); err != nil {
-				handler.logger.Error(
-					"failed to set query completion state to failed",
+				log.ErrorWithCode(handler.logger, errorcode.HistRespondWorkflowTaskCompletedOperationFailed, "failed to set query completion state to failed", err,
 					tag.WorkflowNamespace(namespaceName.String()),
 					tag.WorkflowID(workflowID),
 					tag.WorkflowRunID(runID),
-					tag.QueryID(id),
-					tag.Error(err))
+					tag.QueryID(id))
 				metrics.QueryRegistryInvalidStateCount.With(scope).Record(1)
 			}
 		} else {
@@ -966,13 +964,11 @@ func (handler *WorkflowTaskCompletedHandler) handleBufferedQueries(
 				Result: result,
 			}
 			if err := queryRegistry.SetCompletionState(id, succeededCompletionState); err != nil {
-				handler.logger.Error(
-					"failed to set query completion state to succeeded",
+				log.ErrorWithCode(handler.logger, errorcode.HistRespondWorkflowTaskCompletedOperationFailed, "failed to set query completion state to succeeded", err,
 					tag.WorkflowNamespace(namespaceName.String()),
 					tag.WorkflowID(workflowID),
 					tag.WorkflowRunID(runID),
-					tag.QueryID(id),
-					tag.Error(err))
+					tag.QueryID(id))
 				metrics.QueryRegistryInvalidStateCount.With(scope).Record(1)
 			}
 		}
@@ -987,13 +983,11 @@ func (handler *WorkflowTaskCompletedHandler) handleBufferedQueries(
 				Type: workflow.QueryCompletionTypeUnblocked,
 			}
 			if err := queryRegistry.SetCompletionState(id, unblockCompletionState); err != nil {
-				handler.logger.Error(
-					"failed to set query completion state to unblocked",
+				log.ErrorWithCode(handler.logger, errorcode.HistRespondWorkflowTaskCompletedOperationFailed, "failed to set query completion state to unblocked", err,
 					tag.WorkflowNamespace(namespaceName.String()),
 					tag.WorkflowID(workflowID),
 					tag.WorkflowRunID(runID),
-					tag.QueryID(id),
-					tag.Error(err))
+					tag.QueryID(id))
 				metrics.QueryRegistryInvalidStateCount.With(scope).Record(1)
 			}
 		}

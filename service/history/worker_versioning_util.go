@@ -8,6 +8,7 @@ import (
 	persistencespb "go.temporal.io/server/api/persistence/v1"
 	taskqueuespb "go.temporal.io/server/api/taskqueue/v1"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -138,7 +139,7 @@ func initializeWorkflowAssignedBuildId(
 			// build ID.
 			// Since it does not affect WF progress, just logging warn and skipping the error.
 			// TODO: let the error bubble up so the task is rescheduled and build ID is fully updated
-			logger.Error("failed to update workflow's assigned build ID", append(tasks.Tags(transferTask), tag.Error(retErr))...)
+			log.ErrorWithCode(logger, errorcode.HistoryTaskProcessingFailed, "failed to update workflow's assigned build ID", retErr, tasks.Tags(transferTask)...)
 		}
 		retErr = nil
 	}()

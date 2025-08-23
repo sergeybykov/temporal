@@ -13,6 +13,7 @@ import (
 	"go.temporal.io/server/client"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
@@ -114,12 +115,11 @@ func isWorkflowExistOnSource(
 		if common.IsNotFoundError(err) {
 			return false
 		}
-		logger.Error("Error describe mutable state from remote.",
+		log.ErrorWithCode(logger, errorcode.HistReplicationTaskExecutorOperationFailed, "Error describe mutable state from remote.", err,
 			tag.WorkflowNamespaceID(workflowKey.GetNamespaceID()),
 			tag.WorkflowID(workflowKey.GetWorkflowID()),
 			tag.WorkflowRunID(workflowKey.GetRunID()),
-			tag.ClusterName(remoteClusterName),
-			tag.Error(err))
+			tag.ClusterName(remoteClusterName))
 	}
 	return true
 }

@@ -18,6 +18,7 @@ import (
 	"go.temporal.io/server/common/locks"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/persistence"
 	"go.temporal.io/server/common/persistence/transitionhistory"
@@ -285,7 +286,8 @@ func (s *SyncStateRetrieverImpl) getSyncStateResult(
 			tag.WorkflowNamespaceID(namespaceID),
 			tag.WorkflowID(execution.WorkflowId),
 			tag.WorkflowRunID(execution.RunId),
-			tag.Error(err))
+			tag.Error(err),
+			tag.ErrorCode(errorcode.VersionHistoryGetFailed))
 		return result, nil
 	}
 	result.SyncedVersionHistory = currentVersionHistory
@@ -455,6 +457,7 @@ func (s *SyncStateRetrieverImpl) getEventsBlob(
 					tag.WorkflowNamespaceID(workflowKey.NamespaceID),
 					tag.WorkflowID(workflowKey.WorkflowID),
 					tag.WorkflowRunID(workflowKey.RunID),
+					tag.ErrorCode(errorcode.XDCCacheEventsTruncated),
 				)
 				eventBlobs = append(eventBlobs, xdcCacheValue.EventBlobs[:left]...)
 				return eventBlobs, nil

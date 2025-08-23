@@ -5,6 +5,7 @@ package queues
 import (
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -208,7 +209,7 @@ func NewRateLimitedScheduler(
 			timeSource,
 		)
 		if err != nil {
-			logger.Error("Failed to create delayed rate limited scheduler", tag.Error(err))
+			log.ErrorWithCode(logger, errorcode.HistorySchedulerCreationFailed, "Failed to create delayed rate limited scheduler", err)
 			return baseScheduler
 		}
 

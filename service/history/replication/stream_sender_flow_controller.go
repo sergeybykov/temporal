@@ -11,6 +11,7 @@ import (
 	replicationspb "go.temporal.io/server/api/replication/v1"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/quotas"
 	"go.temporal.io/server/service/history/configs"
 )
@@ -93,7 +94,7 @@ func (s *SenderFlowControllerImpl) Wait(ctx context.Context, priority enumsspb.T
 		defer cancel()
 		err := rateLimiter.Wait(childCtx)
 		if err != nil {
-			s.logger.Error("error waiting for rate limiter", tag.Error(err))
+			s.logger.Error("error waiting for rate limiter", tag.Error(err), tag.ErrorCode(errorcode.RateLimiterWaitFailed))
 			return err
 		}
 		return nil

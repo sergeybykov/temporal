@@ -8,6 +8,7 @@ import (
 
 	enumspb "go.temporal.io/api/enums/v1"
 	carchiver "go.temporal.io/server/common/archiver"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -159,10 +160,10 @@ func (e *archivalQueueTaskExecutor) getArchiveTaskRequest(
 				metrics.NamespaceTag(namespaceName.String()),
 				metrics.FailureTag(metrics.InvalidVisibilityURITagValue),
 			)
-			logger.Error(
+			log.ErrorWithCode(logger, errorcode.HistoryVisibilityURIParsingFailed,
 				"Failed to parse visibility URI.",
+				err,
 				tag.ArchivalURI(visibilityURIString),
-				tag.Error(err),
 			)
 			return nil, fmt.Errorf("failed to parse visibility URI for archival task: %w", err)
 		}
@@ -177,10 +178,10 @@ func (e *archivalQueueTaskExecutor) getArchiveTaskRequest(
 				metrics.NamespaceTag(namespaceName.String()),
 				metrics.FailureTag(metrics.InvalidHistoryURITagValue),
 			)
-			logger.Error(
+			log.ErrorWithCode(logger, errorcode.HistoryArchivalURIParsingFailed,
 				"Failed to parse history URI.",
+				err,
 				tag.ArchivalURI(historyURIString),
-				tag.Error(err),
 			)
 			return nil, fmt.Errorf("failed to parse history URI for archival task: %w", err)
 		}

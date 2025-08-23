@@ -17,6 +17,7 @@ import (
 	"go.temporal.io/server/common/dynamicconfig"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/persistence"
@@ -371,7 +372,7 @@ func (p *ackMgrImpl) swallowPartialResultsError(
 	err error,
 ) ([]*replicationspb.ReplicationTask, int64, error) {
 
-	p.logger.Error("Replication tasks reader encountered error, return earlier.", tag.Error(err), tag.Value(len(replicationTasks)))
+	p.logger.Error("Replication tasks reader encountered error, return earlier.", tag.Error(err), tag.Value(len(replicationTasks)), tag.ErrorCode(errorcode.ReplicationTaskReaderError))
 	if len(replicationTasks) == 0 {
 		return nil, 0, err
 	}

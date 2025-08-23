@@ -18,6 +18,7 @@ import (
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/convert"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -190,7 +191,7 @@ func (p *taskProcessorImpl) eventLoop() {
 
 		case <-syncShardTimer.C:
 			if err := p.handleSyncShardStatus(syncShardTask); err != nil {
-				p.logger.Error("unable to sync shard status", tag.Error(err))
+				log.ErrorWithCode(p.logger, errorcode.HistReplicationTaskProcessorOperationFailed, "unable to sync shard status", err)
 				metrics.SyncShardFromRemoteFailure.With(p.metricsHandler).Record(
 					1,
 					metrics.OperationTag(metrics.HistorySyncShardStatusScope))
@@ -205,7 +206,7 @@ func (p *taskProcessorImpl) eventLoop() {
 
 		case <-replicationTimer.C:
 			if err := p.pollProcessReplicationTasks(); err != nil {
-				p.logger.Error("unable to process replication tasks", tag.Error(err))
+				log.ErrorWithCode(p.logger, errorcode.HistReplicationTaskProcessorOperationFailed, "unable to process replication tasks", err)
 			}
 			replicationTimer.Reset(p.rxTaskBackoff)
 		}
@@ -267,14 +268,13 @@ func (p *taskProcessorImpl) applyReplicationTask(
 		return err
 	}
 
-	p.logger.Error(
+	log.ErrorWithCode(p.logger, errorcode.HistReplicationTaskProcessorOperationFailed,
 		"failed to apply replication task after retry",
-		tag.TaskID(replicationTask.GetSourceTaskId()),
-		tag.Error(err),
-	)
+		err,
+		tag.TaskID(replicationTask.GetSourceTaskId()))
 	request, err := p.convertTaskToDLQTask(replicationTask)
 	if err != nil {
-		p.logger.Error("failed to generate DLQ replication task", tag.Error(err))
+		log.ErrorWithCode(p.logger, errorcode.HistReplicationTaskProcessorOperationFailed, "failed to generate DLQ replication task", err)
 		return nil
 	}
 	return p.handleReplicationDLQTask(ctx, request)
@@ -353,7 +353,7 @@ func (p *taskProcessorImpl) handleReplicationDLQTask(
 	return backoff.ThrottleRetry(func() error {
 		err := writeTaskToDLQ(ctx, p.dlqWriter, p.sourceShardID, request.SourceClusterName, p.shard.GetShardID(), request.TaskInfo)
 		if err != nil {
-			p.logger.Error("failed to enqueue replication task to DLQ", tag.Error(err))
+			log.ErrorWithCode(p.logger, errorcode.HistReplicationTaskProcessorOperationFailed, "failed to enqueue replication task to DLQ", err)
 			metrics.ReplicationDLQFailed.With(p.metricsHandler).Record(
 				1,
 				metrics.OperationTag(metrics.ReplicationTaskFetcherScope),
@@ -394,7 +394,7 @@ func (p *taskProcessorImpl) convertTaskToDLQTask(
 		}
 
 		if len(events) == 0 {
-			p.logger.Error("Empty events in a batch")
+			log.ErrorWithCode(p.logger, errorcode.HistReplicationTaskProcessorOperationFailed, "Empty events in a batch", nil)
 			return nil, ErrCorruptedHistoryEventBatch
 		}
 		firstEvent := events[0]

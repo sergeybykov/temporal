@@ -9,6 +9,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/metrics"
 )
 
@@ -129,7 +130,7 @@ func (s *BiDirectionStreamImpl[Req, Resp]) closeLocked() {
 	if s.streamingClient != nil {
 		err := s.streamingClient.CloseSend() // if there is error, the stream is also closed
 		if err != nil {
-			s.logger.Error("BiDirectionStream close error", tag.Error(err))
+			s.logger.Error("BiDirectionStream close error", tag.Error(err), tag.ErrorCode(errorcode.StreamCloseError))
 		}
 	}
 }

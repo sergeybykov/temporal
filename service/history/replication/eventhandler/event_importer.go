@@ -13,6 +13,7 @@ import (
 	"go.temporal.io/server/common/definition"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/persistence/serialization"
 	"go.temporal.io/server/common/persistence/versionhistory"
@@ -103,6 +104,7 @@ func (e *eventImporterImpl) ImportHistoryEventsFromBeginning(
 			e.logger.Error("failed to get history events",
 				tag.WorkflowNamespaceID(workflowKey.NamespaceID),
 				tag.WorkflowID(workflowKey.WorkflowID),
+				tag.ErrorCode(errorcode.HistoryEventGetFailed),
 				tag.WorkflowRunID(workflowKey.RunID),
 				tag.Error(err))
 			return err
@@ -147,6 +149,7 @@ func (e *eventImporterImpl) ImportHistoryEventsFromBeginning(
 		e.logger.Error("failed to commit import action",
 			tag.WorkflowNamespaceID(workflowKey.NamespaceID),
 			tag.WorkflowID(workflowKey.WorkflowID),
+			tag.ErrorCode(errorcode.ImportActionCommitFailed),
 			tag.WorkflowRunID(workflowKey.RunID),
 			tag.Error(err))
 		return serviceerror.NewInternal("Failed to commit import transaction")

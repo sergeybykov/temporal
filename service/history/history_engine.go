@@ -19,6 +19,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -857,7 +858,7 @@ func (e *historyEngineImpl) NotifyNewTasks(
 				// On shard reload it sends fake tasks to wake up the queue processors. Only log if there are "real"
 				// tasks that can't be processed.
 				if _, ok := tasksByCategory[0].(*tasks.FakeTask); !ok {
-					e.logger.Error("Skipping notification for new tasks, processor not registered", tag.TaskCategoryID(category.ID()))
+					log.ErrorWithCode(e.logger, errorcode.HistoryTaskProcessorNotRegistered, "Skipping notification for new tasks, processor not registered", nil, tag.TaskCategoryID(category.ID()))
 				}
 				continue
 			}

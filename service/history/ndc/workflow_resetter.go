@@ -19,6 +19,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/failure"
 	"go.temporal.io/server/common/locks"
 	"go.temporal.io/server/common/log"
@@ -666,7 +667,7 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 		// noop
 	case *serviceerror.DataLoss:
 		// log event
-		r.logger.Error("encountered data loss event", tag.WorkflowNamespaceID(namespaceID.String()), tag.WorkflowID(workflowID), tag.WorkflowRunID(baseRunID))
+		log.ErrorWithCode(r.logger, errorcode.HistoryDataInconsistency, "encountered data loss event", err, tag.WorkflowNamespaceID(namespaceID.String()), tag.WorkflowID(workflowID), tag.WorkflowRunID(baseRunID))
 		return "", err
 	default:
 		return "", err
@@ -733,7 +734,7 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 			// noop
 		case *serviceerror.DataLoss:
 			// log event
-			r.logger.Error("encounter data loss event", tag.WorkflowNamespaceID(namespaceID.String()), tag.WorkflowID(workflowID), tag.WorkflowRunID(nextRunID))
+			log.ErrorWithCode(r.logger, errorcode.HistoryDataInconsistency, "encounter data loss event", err, tag.WorkflowNamespaceID(namespaceID.String()), tag.WorkflowID(workflowID), tag.WorkflowRunID(nextRunID))
 			return "", err
 		default:
 			return "", err

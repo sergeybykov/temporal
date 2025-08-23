@@ -17,6 +17,7 @@ import (
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/quotas"
 	"go.temporal.io/server/common/rpc"
 	"go.temporal.io/server/service/history/configs"
@@ -405,7 +406,7 @@ func (f *replicationTaskFetcherWorker) getMessages() error {
 	}
 	response, err := remoteClient.GetReplicationMessages(ctx, request)
 	if err != nil {
-		f.logger.Error("Failed to get replication tasks", tag.Error(err))
+		f.logger.Error("Failed to get replication tasks", tag.Error(err), tag.ErrorCode(errorcode.ReplicationTaskFetchFailed))
 		for _, req := range requestByShard {
 			close(req.respChan)
 		}

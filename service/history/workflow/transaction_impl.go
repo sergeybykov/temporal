@@ -7,6 +7,7 @@ import (
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -80,7 +81,7 @@ func (t *TransactionImpl) CreateWorkflowExecution(
 	}
 
 	if err := NotifyNewHistorySnapshotEvent(engine, newWorkflowSnapshot); err != nil {
-		t.logger.Error("unable to notify workflow creation", tag.Error(err))
+		log.ErrorWithCode(t.logger, errorcode.HistWorkflowTransactionOperationFailed, "unable to notify workflow creation", err)
 	}
 
 	return int64(resp.NewMutableStateStats.HistoryStatistics.SizeDiff), nil
@@ -135,13 +136,13 @@ func (t *TransactionImpl) ConflictResolveWorkflowExecution(
 	}
 
 	if err := NotifyNewHistorySnapshotEvent(engine, resetWorkflowSnapshot); err != nil {
-		t.logger.Error("unable to notify workflow reset", tag.Error(err))
+		log.ErrorWithCode(t.logger, errorcode.HistWorkflowTransactionOperationFailed, "unable to notify workflow reset", err)
 	}
 	if err := NotifyNewHistorySnapshotEvent(engine, newWorkflowSnapshot); err != nil {
-		t.logger.Error("unable to notify workflow creation", tag.Error(err))
+		log.ErrorWithCode(t.logger, errorcode.HistWorkflowTransactionOperationFailed, "unable to notify workflow creation", err)
 	}
 	if err := NotifyNewHistoryMutationEvent(engine, currentWorkflowMutation); err != nil {
-		t.logger.Error("unable to notify workflow mutation", tag.Error(err))
+		log.ErrorWithCode(t.logger, errorcode.HistWorkflowTransactionOperationFailed, "unable to notify workflow mutation", err)
 	}
 	resetHistorySizeDiff := int64(resp.ResetMutableStateStats.HistoryStatistics.SizeDiff)
 	newHistorySizeDiff := int64(0)
@@ -196,10 +197,10 @@ func (t *TransactionImpl) UpdateWorkflowExecution(
 	}
 
 	if err := NotifyNewHistoryMutationEvent(engine, currentWorkflowMutation); err != nil {
-		t.logger.Error("unable to notify workflow mutation", tag.Error(err))
+		log.ErrorWithCode(t.logger, errorcode.HistWorkflowTransactionOperationFailed, "unable to notify workflow mutation", err)
 	}
 	if err := NotifyNewHistorySnapshotEvent(engine, newWorkflowSnapshot); err != nil {
-		t.logger.Error("unable to notify workflow creation", tag.Error(err))
+		log.ErrorWithCode(t.logger, errorcode.HistWorkflowTransactionOperationFailed, "unable to notify workflow creation", err)
 	}
 	updateHistorySizeDiff := int64(resp.UpdateMutableStateStats.HistoryStatistics.SizeDiff)
 	newHistorySizeDiff := int64(0)

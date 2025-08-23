@@ -9,6 +9,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/collection"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -253,7 +254,7 @@ func (p *scheduledQueue) lookAheadTask() {
 	}
 	response, err := p.shard.GetHistoryTasks(ctx, request)
 	if err != nil {
-		p.logger.Error("Failed to load look ahead task", tag.Error(err))
+		log.ErrorWithCode(p.logger, errorcode.HistoryQueueTaskLoadFailed, "Failed to load look ahead task", err)
 		if common.IsResourceExhausted(err) {
 			p.timerGate.Update(p.timeSource.Now().Add(lookAheadRateLimitDelay))
 		} else {

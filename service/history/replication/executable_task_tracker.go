@@ -9,6 +9,7 @@ import (
 	replicationspb "go.temporal.io/server/api/replication/v1"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/metrics"
 	ctasks "go.temporal.io/server/common/tasks"
 )
@@ -126,7 +127,7 @@ Loop:
 			element = nextElement
 		case ctasks.TaskStateNacked:
 			if err := task.MarkPoisonPill(); err != nil {
-				t.logger.Error("unable to save poison pill", tag.Error(err), tag.TaskID(task.TaskID()))
+				t.logger.Error("unable to save poison pill", tag.Error(err), tag.TaskID(task.TaskID()), tag.ErrorCode(errorcode.ReplicationTaskSaveFailed))
 				metrics.ReplicationDLQFailed.With(t.metricsHandler).Record(
 					1,
 					metrics.OperationTag(metrics.ReplicationTaskTrackerScope),

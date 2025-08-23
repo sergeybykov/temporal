@@ -10,6 +10,7 @@ import (
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/debug"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -360,7 +361,7 @@ func (p *queueBase) rangeCompleteTasks(
 		InclusiveMinTaskKey: oldExclusiveDeletionHighWatermark,
 		ExclusiveMaxTaskKey: newExclusiveDeletionHighWatermark,
 	}); err != nil {
-		p.logger.Error("Error range completing queue task", tag.Error(err))
+		log.ErrorWithCode(p.logger, errorcode.HistoryQueueTaskRangeCompleteFailed, "Error range completing queue task", err)
 		return err
 	}
 	return nil
@@ -383,7 +384,7 @@ func (p *queueBase) updateQueueState(
 	}))
 	if err != nil {
 		metrics.AckLevelUpdateFailedCounter.With(p.metricsHandler).Record(1)
-		p.logger.Error("Error updating queue state", tag.Error(err), tag.OperationFailed)
+		log.ErrorWithCode(p.logger, errorcode.HistoryQueueUpdateStateFailed, "Error updating queue state", err, tag.OperationFailed)
 	}
 	return err
 }

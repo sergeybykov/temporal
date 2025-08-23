@@ -16,6 +16,7 @@ import (
 	"go.temporal.io/server/common/definition"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/persistence/serialization"
 	"go.temporal.io/server/common/persistence/versionhistory"
@@ -255,6 +256,7 @@ func (r *resendHandlerImpl) replicateRemoteGeneratedEvents(
 			r.logger.Error("failed to replicate events",
 				tag.WorkflowNamespaceID(namespaceID.String()),
 				tag.WorkflowID(workflowID),
+				tag.ErrorCode(errorcode.EventReplicationFailed),
 				tag.WorkflowRunID(runID),
 				tag.Error(err))
 			return err
@@ -271,6 +273,7 @@ func (r *resendHandlerImpl) replicateRemoteGeneratedEvents(
 			r.logger.Error("failed to get history events",
 				tag.WorkflowNamespaceID(namespaceID.String()),
 				tag.WorkflowID(workflowID),
+				tag.ErrorCode(errorcode.HistoryEventGetFailed),
 				tag.WorkflowRunID(runID),
 				tag.Error(err))
 			return err

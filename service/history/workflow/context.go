@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/locks"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -726,7 +727,8 @@ func (c *ContextImpl) mergeUpdateWithNewReplicationTasks(
 				}
 			}
 			if !taskEquivalentsUpdated {
-				c.logger.Error("SyncVersionedTransitionTask has no HistoryReplicationTask equivalent to update")
+				log.ErrorWithCode(c.logger, errorcode.HistorySyncVersionedTransitionMissing,
+					"SyncVersionedTransitionTask has no HistoryReplicationTask equivalent to update", nil)
 			}
 			return taskEquivalentsUpdated
 		default:

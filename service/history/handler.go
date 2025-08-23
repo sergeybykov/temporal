@@ -26,6 +26,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/convert"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -391,8 +392,7 @@ func (h *Handler) RecordWorkflowTaskStarted(ctx context.Context, request *histor
 	}
 	engine, err := shardContext.GetEngine(ctx)
 	if err != nil {
-		h.logger.Error("RecordWorkflowTaskStarted failed.",
-			tag.Error(err),
+		log.ErrorWithCode(h.logger, errorcode.HistoryEngineRetrievalFailed, "RecordWorkflowTaskStarted failed.", err,
 			tag.WorkflowID(request.WorkflowExecution.GetWorkflowId()),
 			tag.WorkflowRunID(request.WorkflowExecution.GetRunId()),
 			tag.WorkflowScheduledEventID(request.GetScheduledEventId()),
@@ -1763,7 +1763,7 @@ func (h *Handler) GetDLQReplicationMessages(ctx context.Context, request *histor
 			taskInfos,
 		)
 		if err != nil {
-			h.logger.Error("Failed to get dlq replication tasks.", tag.Error(err))
+			log.ErrorWithCode(h.logger, errorcode.HistoryDLQReplicationTasksFailed, "Failed to get dlq replication tasks.", err)
 			return
 		}
 

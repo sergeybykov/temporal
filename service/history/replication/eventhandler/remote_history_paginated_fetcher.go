@@ -11,6 +11,7 @@ import (
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/persistence/serialization"
 	"go.temporal.io/server/common/rpc"
@@ -230,7 +231,7 @@ func (n *HistoryPaginatedFetcherImpl) getHistory(
 
 	dataBlobs, versionHistory, nextPageToken, err := getResponse()
 	if err != nil {
-		logger.Error("error getting history", tag.Error(err))
+		logger.Error("error getting history", tag.Error(err), tag.ErrorCode(errorcode.HistoryGetError))
 		return nil, nil, err
 	}
 
