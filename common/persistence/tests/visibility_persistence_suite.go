@@ -13,7 +13,8 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/server/common/debug"
 	"go.temporal.io/server/common/dynamicconfig"
-	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/payload"
@@ -84,7 +85,7 @@ func (s *VisibilityPersistenceSuite) SetupSuite() {
 
 	if err != nil {
 		// s.NoError doesn't work here.
-		s.Logger.Fatal("Unable to create visibility manager", tag.Error(err))
+		log.FatalWithCode(s.Logger, errorcode.PersistenceVisibilityStoreOperationFailed, "Unable to create visibility manager", err)
 	}
 }
 

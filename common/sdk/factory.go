@@ -15,6 +15,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -83,7 +84,7 @@ func (f *clientFactory) NewClient(options sdkclient.Options) sdkclient.Client {
 	// this shouldn't fail if the first client was created successfully
 	client, err := sdkclient.NewClientFromExisting(f.GetSystemClient(), f.options(options))
 	if err != nil {
-		f.logger.Fatal("error creating sdk client", tag.Error(err))
+		log.FatalWithCode(f.logger, errorcode.CommonNexusOperationFailed, "error creating sdk client", err)
 	}
 	return client
 }
@@ -95,7 +96,7 @@ func (f *clientFactory) GetSystemClient() sdkclient.Client {
 				Namespace: primitives.SystemLocalNamespace,
 			}))
 			if err != nil {
-				f.logger.Warn("error creating sdk client", tag.Error(err))
+				log.WarnWithCode(f.logger, errorcode.CommonNexusOperationFailed, "error creating sdk client", tag.Error(err))
 				return err
 			}
 			f.systemSdkClient = sdkClient
@@ -106,7 +107,7 @@ func (f *clientFactory) GetSystemClient() sdkclient.Client {
 			return common.IsContextDeadlineExceededErr(err) || errors.As(err, &unavail)
 		})
 		if err != nil {
-			f.logger.Fatal("error creating sdk client", tag.Error(err))
+			log.FatalWithCode(f.logger, errorcode.CommonNexusOperationFailed, "error creating sdk client", err)
 		}
 
 		if size := f.stickyCacheSize(); size > 0 {

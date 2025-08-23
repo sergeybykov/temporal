@@ -1,6 +1,7 @@
 package softassert
 
 import (
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 )
@@ -20,7 +21,7 @@ import (
 func That(logger log.Logger, condition bool, msg string) bool {
 	if !condition {
 		// By using the same prefix for all assertions, they can be reliably found in logs.
-		logger.Error("failed assertion: "+msg, tag.FailedAssertion)
+		log.ErrorWithCode(logger, errorcode.CommonSoftAssertOperationFailed, "failed assertion: "+msg, nil, tag.FailedAssertion)
 	}
 	return condition
 }
@@ -28,5 +29,5 @@ func That(logger log.Logger, condition bool, msg string) bool {
 // Fail logs an error message indicating a failed assertion.
 // It works the same as That, but does not require a condition.
 func Fail(logger log.Logger, msg string) {
-	logger.Error("failed assertion: "+msg, tag.FailedAssertion)
+	log.ErrorWithCode(logger, errorcode.CommonSoftAssertOperationFailed, "failed assertion: "+msg, nil, tag.FailedAssertion)
 }

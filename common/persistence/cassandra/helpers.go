@@ -3,6 +3,7 @@ package cassandra
 import (
 	"fmt"
 
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/persistence/nosql/nosqlplugin/cassandra/gocql"
@@ -16,14 +17,14 @@ func CreateCassandraKeyspace(s gocql.Session, keyspace string, replicas int, ove
 	if overwrite {
 		err = DropCassandraKeyspace(s, keyspace, logger)
 		if err != nil {
-			logger.Error("drop keyspace error", tag.Error(err))
+			log.ErrorWithCode(logger, errorcode.PersistenceCassandraDropKeyspaceError, "drop keyspace error", err)
 			return
 		}
 	}
 	err = s.Query(fmt.Sprintf(`CREATE KEYSPACE IF NOT EXISTS %s WITH replication = {
 		'class' : 'SimpleStrategy', 'replication_factor' : %d}`, keyspace, replicas)).Exec()
 	if err != nil {
-		logger.Error("create keyspace error", tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.PersistenceCassandraCreateKeyspaceError, "create keyspace error", err)
 		return
 	}
 	logger.Debug("created keyspace", tag.Value(keyspace))
@@ -35,7 +36,7 @@ func CreateCassandraKeyspace(s gocql.Session, keyspace string, replicas int, ove
 func DropCassandraKeyspace(s gocql.Session, keyspace string, logger log.Logger) (err error) {
 	err = s.Query(fmt.Sprintf("DROP KEYSPACE IF EXISTS %s", keyspace)).Exec()
 	if err != nil {
-		logger.Error("drop keyspace error", tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.PersistenceCassandraDropKeyspaceError, "drop keyspace error", err)
 		return
 	}
 	logger.Debug("dropped keyspace", tag.Value(keyspace))

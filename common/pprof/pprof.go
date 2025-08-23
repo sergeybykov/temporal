@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 )
@@ -41,7 +42,7 @@ func NewInitializer(cfg *config.PProf, logger log.Logger) *PProfInitializerImpl 
 func (initializer *PProfInitializerImpl) Start() error {
 	port := initializer.PProf.Port
 	if port == 0 {
-		initializer.Logger.Info("PProf not started due to port not set")
+		initializer.Logger.Info("PProf not started due to port not set", tag.ErrorCode(errorcode.CommonNexusOperationFailed))
 		return nil
 	}
 	host := initializer.PProf.Host
@@ -55,10 +56,10 @@ func (initializer *PProfInitializerImpl) Start() error {
 
 	if atomic.CompareAndSwapInt32(&pprofStatus, pprofNotInitialized, pprofInitialized) {
 		go func() {
-			initializer.Logger.Info("PProf listen on ", tag.Host(host), tag.Port(port))
+			initializer.Logger.Info("PProf listen on ", tag.ErrorCode(errorcode.CommonNexusOperationFailed), tag.Host(host), tag.Port(port))
 			err := http.ListenAndServe(hostPort, nil)
 			if err != nil {
-				initializer.Logger.Error("listen and serve err", tag.Error(err))
+				log.ErrorWithCode(initializer.Logger, errorcode.CommonNexusOperationFailed, "listen and serve err", err)
 			}
 		}()
 	}

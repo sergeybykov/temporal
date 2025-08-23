@@ -10,6 +10,7 @@ import (
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -174,7 +175,7 @@ func (s *TestCluster) DropDatabase() {
 func (s *TestCluster) LoadSchema(schemaFile string) {
 	statements, err := p.LoadAndSplitQuery([]string{schemaFile})
 	if err != nil {
-		s.logger.Fatal("LoadSchema", tag.Error(err))
+		log.FatalWithCode(s.logger, errorcode.CommonPersistenceMetricClientOperationFailed, "LoadSchema", err)
 	}
 
 	var db sqlplugin.AdminDB
@@ -198,7 +199,7 @@ func (s *TestCluster) LoadSchema(schemaFile string) {
 
 	for _, stmt := range statements {
 		if err = db.Exec(stmt); err != nil {
-			s.logger.Fatal("LoadSchema", tag.Error(err))
+			log.FatalWithCode(s.logger, errorcode.CommonPersistenceMetricClientOperationFailed, "LoadSchema", err)
 		}
 	}
 	s.logger.Info("loaded schema")

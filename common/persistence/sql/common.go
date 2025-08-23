@@ -10,8 +10,8 @@ import (
 	"fmt"
 
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/persistence"
 	"go.temporal.io/server/common/persistence/sql/sqlplugin"
 )
@@ -41,7 +41,7 @@ func (m *SqlStore) Close() {
 	if m.Db != nil {
 		err := m.Db.Close()
 		if err != nil {
-			m.logger.Error("Error closing SQL database", tag.Error(err))
+			log.ErrorWithCode(m.logger, errorcode.PersistenceSQLCloseDatabaseError, "Error closing SQL database", err)
 		}
 	}
 }
@@ -55,7 +55,7 @@ func (m *SqlStore) txExecute(ctx context.Context, operation string, f func(tx sq
 	if err != nil {
 		rollBackErr := tx.Rollback()
 		if rollBackErr != nil {
-			m.logger.Error("transaction rollback error", tag.Error(rollBackErr))
+			log.ErrorWithCode(m.logger, errorcode.PersistenceSQLTransactionRollbackError, "transaction rollback error", rollBackErr)
 		}
 
 		switch err.(type) {

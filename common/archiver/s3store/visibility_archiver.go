@@ -15,6 +15,7 @@ import (
 	archiverspb "go.temporal.io/server/api/archiver/v1"
 	"go.temporal.io/server/common/archiver"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -100,10 +101,10 @@ func (v *visibilityArchiver) Archive(
 		if err != nil {
 			if isRetryableError(err) {
 				metrics.VisibilityArchiverArchiveTransientErrorCount.With(handler).Record(1)
-				logger.Error(archiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason(archiveFailReason), tag.Error(err))
+				log.ErrorWithCode(logger, errorcode.CommonArchiverOperationFailed, archiver.ArchiveTransientErrorMsg, err, tag.ArchivalArchiveFailReason(archiveFailReason))
 			} else {
 				metrics.VisibilityArchiverArchiveNonRetryableErrorCount.With(handler).Record(1)
-				logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiveFailReason), tag.Error(err))
+				log.ErrorWithCode(logger, errorcode.CommonArchiverOperationFailed, archiver.ArchiveNonRetryableErrorMsg, err, tag.ArchivalArchiveFailReason(archiveFailReason))
 				if featureCatalog.NonRetryableError != nil {
 					err = featureCatalog.NonRetryableError()
 				}

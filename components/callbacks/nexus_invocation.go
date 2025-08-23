@@ -14,6 +14,7 @@ import (
 
 	"github.com/nexus-rpc/sdk-go/nexus"
 	persistencespb "go.temporal.io/server/api/persistence/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -103,7 +104,7 @@ func (n nexusInvocation) Invoke(ctx context.Context, ns *namespace.Namespace, e 
 	e.MetricsHandler.Timer(RequestLatencyHistogram.Name()).Record(time.Since(startTime), namespaceTag, destTag, statusCodeTag)
 
 	if err != nil {
-		e.Logger.Error("Callback request failed with error", tag.Error(err))
+		log.ErrorWithCode(e.Logger, errorcode.ComponentCallbackInvocationFailed, "Callback request failed with error", err)
 		return invocationResultRetry{err}
 	}
 
@@ -113,7 +114,7 @@ func (n nexusInvocation) Invoke(ctx context.Context, ns *namespace.Namespace, e 
 		// propagate errors to the machine.
 		if _, err = io.Copy(io.Discard, response.Body); err == nil {
 			if err = response.Body.Close(); err != nil {
-				e.Logger.Error("Callback request failed with error", tag.Error(err))
+				log.ErrorWithCode(e.Logger, errorcode.ComponentCallbackInvocationFailed, "Callback request failed with error", err)
 				return invocationResultRetry{err}
 			}
 		}
@@ -122,7 +123,7 @@ func (n nexusInvocation) Invoke(ctx context.Context, ns *namespace.Namespace, e 
 
 	retryable := isRetryableHTTPResponse(response)
 	err = readHandlerErrFromResponse(response, e.Logger)
-	e.Logger.Error("Callback request failed", tag.Error(err), tag.NewStringTag("status", response.Status), tag.NewBoolTag("retryable", retryable))
+	log.ErrorWithCode(e.Logger, errorcode.ComponentCallbackInvocationFailed, "Callback request failed", err, tag.NewStringTag("status", response.Status), tag.NewBoolTag("retryable", retryable))
 	if retryable {
 		return invocationResultRetry{err}
 	}
@@ -141,19 +142,19 @@ func readHandlerErrFromResponse(response *http.Response, logger log.Logger) erro
 
 	body, err := readAndReplaceBody(response)
 	if err != nil {
-		logger.Error("Error reading response body for non-ok callback request", tag.Error(err), tag.NewStringTag("status", response.Status))
+		log.ErrorWithCode(logger, errorcode.ComponentCallbackInvocationFailed, "Error reading response body for non-ok callback request", err, tag.NewStringTag("status", response.Status))
 		return err
 	}
 
 	if !isMediaTypeJSON(response.Header.Get("Content-Type")) {
-		logger.Error("received invalid content-type header for non-OK HTTP response to CompleteOperation request", tag.Value(response.Header.Get("Content-Type")))
+		log.ErrorWithCode(logger, errorcode.ComponentCallbackInvocationFailed, "received invalid content-type header for non-OK HTTP response to CompleteOperation request", nil, tag.Value(response.Header.Get("Content-Type")))
 		return handlerErr
 	}
 
 	var failure nexus.Failure
 	err = json.Unmarshal(body, &failure)
 	if err != nil {
-		logger.Error("failed to deserialize Nexus Failure from HTTP response to CompleteOperation request", tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.ComponentCallbackInvocationFailed, "failed to deserialize Nexus Failure from HTTP response to CompleteOperation request", err)
 		return handlerErr
 	}
 

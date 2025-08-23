@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"go.temporal.io/server/common/clock"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -85,10 +86,9 @@ func (s *RateLimitedScheduler[T]) wait(task T) {
 		s.quotaRequestFn(task),
 	)
 	if !reservation.OK() {
-		s.logger.Error("unable to make reservation in rateLimitedScheduler, skip rate limiting",
+		log.ErrorWithCode(s.logger, errorcode.CommonTaskSchedulerOperationFailed, "unable to make reservation in rateLimitedScheduler, skip rate limiting", nil,
 			tag.Key("quota-request"),
-			tag.Value(s.quotaRequestFn(task)),
-		)
+			tag.Value(s.quotaRequestFn(task)))
 		return
 	}
 

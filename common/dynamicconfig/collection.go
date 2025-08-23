@@ -15,6 +15,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	"go.temporal.io/server/common/clock"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/goro"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -269,7 +270,7 @@ func matchAndConvertCvs[T any](
 	if err != nil {
 		// We failed to convert the value to the desired type. Use the default.
 		if c.throttleLog() {
-			c.logger.Warn("Failed to convert value, using default", tag.Key(key.String()), tag.IgnoredValue(cvp), tag.Error(err))
+			log.WarnWithCode(c.logger, errorcode.CommonDynamicConfigOperationFailed, "Failed to convert value, using default", tag.Key(key.String()), tag.IgnoredValue(cvp), tag.Error(err))
 		}
 		return def, usingDefaultValue
 	}
@@ -324,7 +325,7 @@ func findAndResolveWithConstrainedDefaults[T any](
 	if defOrder == 0 {
 		// This is a server bug: all precedence lists must end with no-constraints, and all
 		// constrained defaults must have a no-constraints value, so we should have gotten a match.
-		c.logger.Warn("Constrained defaults had no match (this is a bug; fix server code)", tag.Key(key.String()))
+		log.WarnWithCode(c.logger, errorcode.CommonDynamicConfigOperationFailed, "Constrained defaults had no match (this is a bug; fix server code)", tag.Key(key.String()))
 		// leave value as the zero value, that's the best we can do
 		return value, usingDefaultValue
 	} else if valOrder == 0 {
@@ -340,7 +341,7 @@ func findAndResolveWithConstrainedDefaults[T any](
 	if err != nil {
 		// We failed to convert the value to the desired type. Use the default.
 		if c.throttleLog() {
-			c.logger.Warn("Failed to convert value, using default", tag.Key(key.String()), tag.IgnoredValue(cvp), tag.Error(err))
+			log.WarnWithCode(c.logger, errorcode.CommonDynamicConfigOperationFailed, "Failed to convert value, using default", tag.Key(key.String()), tag.IgnoredValue(cvp), tag.Error(err))
 		}
 		return defVal, usingDefaultValue
 	}
@@ -529,7 +530,7 @@ func convertWithCache[T any](c *Collection, key Key, convert func(any) (T, error
 			return t, nil
 		}
 		// Each key can only be used with a single type, so this shouldn't happen
-		c.logger.Warn("Cached converted value has wrong type", tag.Key(key.String()))
+		log.WarnWithCode(c.logger, errorcode.CommonDynamicConfigOperationFailed, "Cached converted value has wrong type", tag.Key(key.String()))
 		// Fall through to regular conversion
 	}
 	c.convertCacheLock.Unlock()

@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/urfave/cli"
 	"go.temporal.io/server/common/convert"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/tests/testutils"
 )
 
@@ -34,7 +34,7 @@ func (tb *SetupSchemaTestBase) SetupSuiteBase(db DB, pluginName string) {
 	tb.DBName = fmt.Sprintf("setup_test_%v", tb.rand.Int63())
 	err := db.CreateDatabase(tb.DBName)
 	if err != nil {
-		tb.Logger.Fatal("error creating database, ", tag.Error(err))
+		log.FatalWithCode(tb.Logger, errorcode.ToolsSchemaEmbedOperationFailed, "error creating database, ", err)
 	}
 	tb.db = db
 	tb.pluginName = pluginName

@@ -8,6 +8,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/api"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
@@ -108,5 +109,5 @@ func (mi *MaskInternalErrorDetailsInterceptor) logError(
 	logTags = append(logTags, tag.NewStringerTag("grpc_code", statusCode))
 	logTags = append(logTags, mi.workflowTags.Extract(req, fullMethod)...)
 
-	mi.logger.Error("masked service failures", append(logTags, tag.Error(err))...)
+	log.ErrorWithCode(mi.logger, errorcode.InfraServiceLifecycleOperationFailed, "masked service failures", err, logTags...)
 }

@@ -9,6 +9,7 @@ import (
 
 	"go.temporal.io/server/common/auth"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -298,15 +299,15 @@ func newServerTLSConfig(
 		if perHostCertProviderMap != nil && perHostCertProviderMap.NumberOfHosts() > 0 {
 			perHostCertProvider, hostClientAuthRequired, err := perHostCertProviderMap.GetCertProvider(c.ServerName)
 			if err != nil {
-				logger.Error("error while looking up per-host provider for attempted incoming TLS connection",
-					tag.ServerName(c.ServerName), tag.Address(remoteAddress), tag.Error(err))
+				log.ErrorWithCode(logger, errorcode.TLSPerHostProviderLookupError, "error while looking up per-host provider for attempted incoming TLS connection", err,
+					tag.ServerName(c.ServerName), tag.Address(remoteAddress))
 				return nil, err
 			}
 
 			if perHostCertProvider != nil {
 				return getServerTLSConfigFromCertProvider(perHostCertProvider, hostClientAuthRequired, remoteAddress, c.ServerName, logger)
 			}
-			logger.Warn("cannot find a per-host provider for attempted incoming TLS connection. returning default TLS configuration",
+			log.WarnWithCode(logger, errorcode.TLSPerHostProviderLookupError, "cannot find a per-host provider for attempted incoming TLS connection. returning default TLS configuration",
 				tag.ServerName(c.ServerName), tag.Address(remoteAddress))
 			return getServerTLSConfigFromCertProvider(certProvider, clientAuthRequired, remoteAddress, c.ServerName, logger)
 		}
@@ -428,7 +429,7 @@ func (s *localStoreTlsProvider) checkCertExpiration() {
 	if window != 0 {
 		expiring, expired, err := s.GetExpiringCerts(window)
 		if err != nil {
-			s.logger.Error("error while checking for certificate expiration", tag.Error(err))
+			log.ErrorWithCode(s.logger, errorcode.TLSCertExpirationCheckError, "error while checking for certificate expiration", err)
 			return
 		}
 		if s.metricsHandler != nil {
@@ -445,9 +446,9 @@ func (s *localStoreTlsProvider) logCerts(certs CertExpirationMap, expired bool, 
 	for _, cert := range certs {
 		str := createExpirationLogMessage(cert, expired)
 		if expired || cert.Expiration.Before(errorTime) {
-			s.logger.Error(str)
+			log.ErrorWithCode(s.logger, errorcode.TLSCertExpired, str, nil)
 		} else {
-			s.logger.Warn(str)
+			log.WarnWithCode(s.logger, errorcode.TLSCertExpirationCheckError, str)
 		}
 	}
 }

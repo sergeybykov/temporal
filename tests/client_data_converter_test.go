@@ -14,6 +14,8 @@ import (
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/rpc"
 	"go.temporal.io/server/tests/testcore"
 )
@@ -64,7 +66,7 @@ func testChildWorkflow(ctx workflow.Context, totalCount, runCount int) (string, 
 	logger := workflow.GetLogger(ctx)
 	logger.Info("Child workflow execution started")
 	if runCount <= 0 {
-		logger.Error("Invalid valid for run count", "RunCount", runCount)
+		logger.Error("Invalid valid for run count", tag.ErrorCode(errorcode.TestExecutionFailure), "RunCount", runCount)
 		return "", ErrInvalidRunCount
 	}
 
@@ -111,7 +113,7 @@ func testParentWorkflow(ctx workflow.Context) (string, error) {
 	var result string
 	err := workflow.ExecuteChildWorkflow(ctx, testChildWorkflow, 0, 3).Get(ctx, &result)
 	if err != nil {
-		logger.Error("Parent execution received child execution failure", "error", err)
+		logger.Error("Parent execution received child execution failure", tag.Error(err), tag.ErrorCode(errorcode.TestExecutionFailure))
 		return "", err
 	}
 
@@ -126,7 +128,7 @@ func testParentWorkflow(ctx workflow.Context) (string, error) {
 	var result1 string
 	err1 := workflow.ExecuteChildWorkflow(ctx1, testChildWorkflow, 0, 2).Get(ctx1, &result1)
 	if err1 != nil {
-		logger.Error("Parent execution received child execution 1 failure", "error", err1)
+		logger.Error("Parent execution received child execution 1 failure", tag.Error(err1), tag.ErrorCode(errorcode.TestExecutionFailure))
 		return "", err1
 	}
 

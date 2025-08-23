@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -96,20 +97,20 @@ func (s *DLQMetricsEmitter) emitMetrics() {
 	}
 	queues, err := s.getDLQList()
 	if err != nil {
-		s.logger.Error("Failed to list DLQs to emit metrics", tag.Error(err))
+		log.ErrorWithCode(s.logger, errorcode.PersistenceDLQListFailed, "Failed to list DLQs to emit metrics", err)
 		return
 	}
 	for _, q := range queues {
 		category, err := GetHistoryTaskQueueCategoryID(q.QueueName)
 		if err != nil {
-			s.logger.Error("Failed to process DLQ queue name", tag.Error(err))
+			log.ErrorWithCode(s.logger, errorcode.PersistenceDLQProcessQueueNameFailed, "Failed to process DLQ queue name", err)
 		}
 		messageCounts[category] += q.MessageCount
 	}
 	for id, count := range messageCounts {
 		category, ok := categories[id]
 		if !ok {
-			s.logger.Error("Failed to find category from ID", tag.TaskCategoryID(id))
+			log.ErrorWithCode(s.logger, errorcode.PersistenceDLQCategoryNotFound, "Failed to find category from ID", nil, tag.TaskCategoryID(id))
 		}
 		metrics.DLQMessageCount.With(s.metricsHandler).Record(float64(count), metrics.TaskCategoryTag(category.Name()))
 	}
@@ -147,7 +148,7 @@ func (s *DLQMetricsEmitter) getDLQList() ([]QueueInfo, error) {
 func (s *DLQMetricsEmitter) shouldEmitMetrics() bool {
 	ownerInfo, err := s.historyServiceResolver.Lookup("1")
 	if err != nil {
-		s.logger.Error("Failed to get the history service hosting shard 1")
+		log.ErrorWithCode(s.logger, errorcode.PersistenceDLQHistoryServiceLookupFailed, "Failed to get the history service hosting shard 1", err)
 		return false
 	}
 

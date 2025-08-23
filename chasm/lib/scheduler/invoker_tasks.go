@@ -17,6 +17,8 @@ import (
 	"go.temporal.io/server/chasm"
 	"go.temporal.io/server/chasm/lib/scheduler/gen/schedulerpb/v1"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
+
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -221,7 +223,7 @@ func (e *InvokerExecuteTaskExecutor) cancelWorkflows(
 			defer resultMutex.Unlock()
 
 			if err != nil {
-				logger.Error("failed to cancel workflow", tag.Error(err), tag.WorkflowID(wf.WorkflowId))
+				log.ErrorWithCode(logger, errorcode.ComponentSchedulerExecutorFailed, "Failed to cancel workflow", err, tag.WorkflowID(wf.WorkflowId))
 				e.MetricsHandler.Counter(metrics.ScheduleCancelWorkflowErrors.Name()).Record(1)
 			}
 
@@ -253,12 +255,11 @@ func (e *InvokerExecuteTaskExecutor) terminateWorkflows(
 		newCtx := ctx.Clone()
 		wg.Go(func() {
 			err := e.terminateWorkflow(newCtx, scheduler, wf)
-
 			resultMutex.Lock()
 			defer resultMutex.Unlock()
 
 			if err != nil {
-				logger.Error("failed to terminate workflow", tag.Error(err), tag.WorkflowID(wf.WorkflowId))
+				log.ErrorWithCode(logger, errorcode.ComponentSchedulerExecutorFailed, "Failed to terminate workflow", err, tag.WorkflowID(wf.WorkflowId))
 				e.MetricsHandler.Counter(metrics.ScheduleTerminateWorkflowErrors.Name()).Record(1)
 			}
 
@@ -296,12 +297,11 @@ func (e *InvokerExecuteTaskExecutor) startWorkflows(
 		newCtx := ctx.Clone()
 		wg.Go(func() {
 			startResult, err := e.startWorkflow(newCtx, scheduler, start)
-
 			resultMutex.Lock()
 			defer resultMutex.Unlock()
 
 			if err != nil {
-				logger.Error("failed to start workflow", tag.Error(err))
+				log.ErrorWithCode(logger, errorcode.ComponentSchedulerExecutorFailed, "Failed to start workflow", err)
 
 				// Don't count "already started" for the error metric or retry, as it is most likely
 				// due to misconfiguration.

@@ -6,6 +6,7 @@ import (
 
 	"go.temporal.io/server/common/api"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/rpc/interceptor/logtags"
@@ -62,5 +63,6 @@ func (i *SlowRequestLoggerInterceptor) logSlowRequest(
 	tags = append(tags, tag.NewDurationTag("duration", elapsed))
 	tags = append(tags, tag.NewStringTag("method", method))
 
-	i.logger.Warn("Slow gRPC call", tags...)
+	allTags := append([]tag.Tag{tag.ErrorCode(errorcode.CommonNexusOperationFailed)}, tags...)
+	i.logger.Warn("Slow gRPC call", allTags...)
 }

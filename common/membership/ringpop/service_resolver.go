@@ -18,6 +18,7 @@ import (
 	"github.com/temporalio/ringpop-go/swim"
 	"github.com/temporalio/tchannel-go"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/membership"
@@ -121,7 +122,7 @@ func newHashRing() *hashring.HashRing {
 func (r *serviceResolver) Start() {
 	r.rp.AddListener(r)
 	if err := r.refresh(refreshModeAlways); err != nil {
-		r.logger.Fatal("unable to start ring pop service resolver", tag.Error(err))
+		log.FatalWithCode(r.logger, errorcode.CommonFinalizerOperationFailed, "unable to start ring pop service resolver", err)
 	}
 
 	r.shutdownWG.Add(1)
@@ -141,7 +142,7 @@ func (r *serviceResolver) Stop() {
 	close(r.shutdownCh)
 
 	if success := common.AwaitWaitGroup(&r.shutdownWG, time.Minute); !success {
-		r.logger.Warn("service resolver timed out on shutdown.")
+		log.WarnWithCode(r.logger, errorcode.CommonFinalizerTimeout, "service resolver timed out on shutdown.")
 	}
 }
 
@@ -252,7 +253,7 @@ func (r *serviceResolver) HandleEvent(
 		// We cannot rely on the content of the event, rather we load everything
 		// from ringpop when we get a notification that something changed.
 		if err := r.refresh(refreshModeAlways); err != nil {
-			r.logger.Error("error refreshing ring when receiving a ring changed event", tag.Error(err))
+			log.ErrorWithCode(r.logger, errorcode.InfraRingRefreshFailed, "error refreshing ring when receiving a ring changed event", err)
 		}
 	}
 }
@@ -318,7 +319,7 @@ func (r *serviceResolver) scheduleRefresh(nextEvent int64) {
 	r.scheduledRefreshMap[nextEvent] = time.AfterFunc(time.Until(nextEventTime), func() {
 		// force refresh asap
 		if err := r.refresh(refreshModeAlways); err != nil {
-			r.logger.Error("error refreshing ring on scheduled event", tag.Error(err))
+			log.ErrorWithCode(r.logger, errorcode.InfraRingRefreshScheduledEventFailed, "error refreshing ring on scheduled event", err)
 		}
 		// clean up map
 		r.refreshLock.Lock()
@@ -408,7 +409,7 @@ func (r *serviceResolver) emitEvent(event *membership.ChangedEvent) {
 		select {
 		case ch <- event:
 		default:
-			r.logger.Error("Failed to send listener notification, channel full", tag.ListenerName(name))
+			log.ErrorWithCode(r.logger, errorcode.InfraListenerNotificationChannelFull, "Failed to send listener notification, channel full", nil, tag.ListenerName(name))
 		}
 	}
 }
@@ -425,11 +426,11 @@ func (r *serviceResolver) refreshRingWorker() {
 			return
 		case <-r.refreshChan:
 			if err := r.refresh(refreshModeLazy); err != nil {
-				r.logger.Error("error refreshing ring by request", tag.Error(err))
+				log.ErrorWithCode(r.logger, errorcode.InfraRingRefreshByRequestFailed, "error refreshing ring by request", err)
 			}
 		case <-refreshTicker.C:
 			if err := r.refresh(refreshModeLazy); err != nil {
-				r.logger.Error("error periodically refreshing ring", tag.Error(err))
+				log.ErrorWithCode(r.logger, errorcode.InfraPeriodicRingRefreshFailed, "error periodically refreshing ring", err)
 			}
 		}
 	}

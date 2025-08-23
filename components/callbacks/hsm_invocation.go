@@ -7,7 +7,8 @@ import (
 
 	"go.temporal.io/server/api/historyservice/v1"
 	persistencespb "go.temporal.io/server/api/persistence/v1"
-	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/namespace"
 	"google.golang.org/grpc/codes"
@@ -83,7 +84,7 @@ func (s hsmInvocation) Invoke(ctx context.Context, ns *namespace.Namespace, e ta
 	e.MetricsHandler.Timer(RequestLatencyHistogram.Name()).Record(time.Since(startTime), namespaceTag, destTag, statusCodeTag)
 
 	if err != nil {
-		e.Logger.Error("Callback request failed", tag.Error(err))
+		log.ErrorWithCode(e.Logger, errorcode.ComponentCallbacksFailed, "Callback request failed", err)
 		if isRetryableRpcResponse(err) {
 			return invocationResultRetry{err}
 		}

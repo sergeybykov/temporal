@@ -19,6 +19,7 @@ import (
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/convert"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/future"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
@@ -127,7 +128,7 @@ func (rpo *monitor) Start() {
 
 	broadcastAddress, err := rpo.broadcastHostPortResolver()
 	if err != nil {
-		rpo.logger.Fatal("unable to resolve broadcast address", tag.Error(err))
+		log.FatalWithCode(rpo.logger, errorcode.CommonFinalizerOperationFailed, "unable to resolve broadcast address", err)
 	}
 
 	// TODO - Note this presents a small race condition as we write our identity before we bootstrap ringpop.
@@ -135,7 +136,7 @@ func (rpo *monitor) Start() {
 	// we must know our seed nodes before bootstrapping
 
 	if err = rpo.startHeartbeat(broadcastAddress); err != nil {
-		rpo.logger.Fatal("unable to initialize membership heartbeats", tag.Error(err))
+		log.FatalWithCode(rpo.logger, errorcode.CommonFinalizerOperationFailed, "unable to initialize membership heartbeats", err)
 	}
 
 	if err = rpo.bootstrapRingPop(); err != nil {
@@ -143,7 +144,7 @@ func (rpo *monitor) Start() {
 		if strings.Contains(err.Error(), "destroyed while attempting to join") {
 			return
 		}
-		rpo.logger.Fatal("failed to start ringpop", tag.Error(err))
+		log.FatalWithCode(rpo.logger, errorcode.CommonFinalizerOperationFailed, "failed to start ringpop", err)
 	}
 
 	labels, err := rpo.rp.Labels()
@@ -372,7 +373,7 @@ func (rpo *monitor) startHeartbeatUpsertLoop(request *persistence.UpsertClusterM
 			err := rpo.upsertMyMembership(rpo.lifecycleCtx, request)
 
 			if err != nil {
-				rpo.logger.Error("Membership upsert failed.", tag.Error(err))
+				log.ErrorWithCode(rpo.logger, errorcode.MemberRingpopMonitorOperationFailed, "Membership upsert failed.", err)
 			}
 
 			jitter := math.Round(rand.Float64() * 5)
@@ -415,12 +416,12 @@ func (rpo *monitor) EvictSelfAt(asOf time.Time) (time.Duration, error) {
 	// set label for eviction time in the future
 	labels, err := rpo.rp.Labels()
 	if err != nil {
-		rpo.logger.Error("unable to set ringpop label", tag.Error(err), tag.Key(stopAtKey))
+		log.ErrorWithCode(rpo.logger, errorcode.MemberRingpopMonitorOperationFailed, "unable to set ringpop label", err, tag.Key(stopAtKey))
 		return 0, err
 	}
 	err = labels.Set(stopAtKey, strconv.FormatInt(asOf.Unix(), 10))
 	if err != nil {
-		rpo.logger.Error("unable to set ringpop label", tag.Error(err), tag.Key(stopAtKey))
+		log.ErrorWithCode(rpo.logger, errorcode.MemberRingpopMonitorOperationFailed, "unable to set ringpop label", err, tag.Key(stopAtKey))
 		return 0, err
 	}
 	// Wait a couple more seconds after the stopAt time before actually leaving.

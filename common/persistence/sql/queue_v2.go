@@ -10,8 +10,8 @@ import (
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	persistencespb "go.temporal.io/server/api/persistence/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/persistence"
 	"go.temporal.io/server/common/persistence/serialization"
 	"go.temporal.io/server/common/persistence/sql/sqlplugin"
@@ -63,7 +63,7 @@ func (q *queueV2) EnqueueMessage(
 	if err != nil {
 		rollBackErr := tx.Rollback()
 		if rollBackErr != nil {
-			q.SqlStore.logger.Error("transaction rollback error", tag.Error(rollBackErr))
+			log.ErrorWithCode(q.SqlStore.logger, errorcode.InfraTransactionFailed, "transaction rollback error", rollBackErr)
 		}
 		return nil, serviceerror.NewUnavailablef(
 			"EnqueueMessage failed for queue with type: %v and name: %v. failed to get next messageId. Error: %v",
@@ -78,7 +78,7 @@ func (q *queueV2) EnqueueMessage(
 	if err != nil {
 		rollBackErr := tx.Rollback()
 		if rollBackErr != nil {
-			q.SqlStore.logger.Error("transaction rollback error", tag.Error(rollBackErr))
+			log.ErrorWithCode(q.SqlStore.logger, errorcode.InfraTransactionFailed, "transaction rollback error", rollBackErr)
 		}
 		return nil, serviceerror.NewUnavailablef(
 			"EnqueueMessage failed for queue with type: %v and name: %v. InsertIntoQueueV2Messages operation failed. Error: %v",

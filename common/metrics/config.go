@@ -10,6 +10,7 @@ import (
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/uber-go/tally/v4"
 	"github.com/uber-go/tally/v4/prometheus"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	statsdreporter "go.temporal.io/server/common/metrics/tally/statsd"
@@ -291,7 +292,7 @@ func NewScope(logger log.Logger, c *Config) tally.Scope {
 	if c.Prometheus != nil {
 		sanitizeOptions, err := convertSanitizeOptionsToTally(c.Prometheus)
 		if err != nil {
-			logger.Fatal("invalid sanitize options input on prometheus config", tag.Error(err))
+			log.FatalWithCode(logger, errorcode.CommonMetricsOperationFailed, "invalid sanitize options input on prometheus config", err)
 			return nil
 		}
 
@@ -408,7 +409,7 @@ func newStatsdScope(logger log.Logger, c *Config) tally.Scope {
 		FlushBytes:    config.FlushBytes,
 	})
 	if err != nil {
-		logger.Fatal("error creating statsd client", tag.Error(err))
+		log.FatalWithCode(logger, errorcode.CommonMetricsOperationFailed, "error creating statsd client", err)
 	}
 	// NOTE: according to (https://github.com/uber-go/tally) Tally's statsd implementation doesn't support tagging.
 	// Therefore, we implement Tally interface to have a statsd reporter that can support tagging
@@ -437,12 +438,12 @@ func newPrometheusScope(
 		prometheus.ConfigurationOptions{
 			Registry: prom.NewRegistry(),
 			OnError: func(err error) {
-				logger.Warn("error in prometheus reporter", tag.Error(err))
+				log.WarnWithCode(logger, errorcode.CommonMetricsOperationFailed, "error in prometheus reporter", tag.Error(err))
 			},
 		},
 	)
 	if err != nil {
-		logger.Fatal("error creating prometheus reporter", tag.Error(err))
+		log.FatalWithCode(logger, errorcode.CommonMetricsOperationFailed, "error creating prometheus reporter", err)
 	}
 	scopeOpts := tally.ScopeOptions{
 		Tags:            clientConfig.Tags,
@@ -468,7 +469,7 @@ func MetricsHandlerFromConfig(logger log.Logger, c *Config) (Handler, error) {
 		// create opentelemetry provider with just statsd
 		otelProvider, err := NewOpenTelemetryProviderWithStatsd(logger, c.Statsd, &c.ClientConfig)
 		if err != nil {
-			logger.Fatal(err.Error())
+			log.FatalWithCode(logger, errorcode.CommonMetricsOperationFailed, err.Error(), err)
 		}
 		return NewOtelMetricsHandler(logger, otelProvider, c.ClientConfig, false)
 	}
@@ -477,7 +478,7 @@ func MetricsHandlerFromConfig(logger log.Logger, c *Config) (Handler, error) {
 		// create opentelemetry provider with just prometheus
 		otelProvider, err := NewOpenTelemetryProviderWithPrometheus(logger, c.Prometheus, &c.ClientConfig, fatalOnListenerError)
 		if err != nil {
-			logger.Fatal(err.Error())
+			log.FatalWithCode(logger, errorcode.CommonMetricsOperationFailed, err.Error(), err)
 		}
 		return NewOtelMetricsHandler(logger, otelProvider, c.ClientConfig, c.ClientConfig.RecordTimerInSeconds)
 	}

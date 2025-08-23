@@ -3,6 +3,7 @@ package visibility
 import (
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -71,7 +72,7 @@ func NewManager(
 		return nil, err
 	}
 	if visibilityManager == nil {
-		logger.Fatal("invalid config: visibility store must be configured")
+		log.FatalWithCode(logger, errorcode.PersistenceVisibilityStoreOperationFailed, "invalid config: visibility store must be configured", nil)
 		return nil, nil
 	}
 
@@ -130,6 +131,7 @@ func newVisibilityManager(
 	}
 	logger.Info(
 		"creating new visibility manager",
+		tag.ErrorCode(errorcode.PersistenceVisibilityStoreOperationFailed),
 		tag.NewStringTag(visibilityPluginNameTag.Key(), visibilityPluginNameTag.Value()),
 		tag.NewStringTag(visibilityIndexNameTag.Key(), visibilityIndexNameTag.Value()),
 	)
@@ -248,7 +250,7 @@ func newVisibilityStoreFromDataStoreConfig(
 		)
 	} else if dsConfig.CustomDataStoreConfig != nil {
 		if customVisibilityStoreFactory == nil {
-			logger.Fatal("custom visibility store factory must be defined")
+			log.FatalWithCode(logger, errorcode.PersistenceVisibilityStoreOperationFailed, "custom visibility store factory must be defined", nil)
 			return nil, nil
 		}
 		visStore, err = customVisibilityStoreFactory.NewVisibilityStore(

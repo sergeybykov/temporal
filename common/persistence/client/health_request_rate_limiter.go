@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -115,6 +116,7 @@ func (rl *HealthRequestRateLimiterImpl) refreshRate() {
 		metrics.DynamicRateLimiterMultiplier.With(rl.metricsHandler).Record(curRateMultiplier)
 		rl.logger.Info(
 			"Health threshold exceeded, reducing rate limit.",
+			tag.ErrorCode(errorcode.CommonPersistenceMetricClientOperationFailed),
 			tag.NewFloat64("newMulti", curRateMultiplier),
 			tag.NewFloat64("newRate", rl.rateLimiter.Rate()),
 			tag.NewFloat64("latencyAvg", rl.healthSignals.AverageLatency()),
@@ -126,6 +128,7 @@ func (rl *HealthRequestRateLimiterImpl) refreshRate() {
 		metrics.DynamicRateLimiterMultiplier.With(rl.metricsHandler).Record(curRateMultiplier)
 		rl.logger.Info(
 			"System healthy, increasing rate limit.",
+			tag.ErrorCode(errorcode.CommonPersistenceMetricClientOperationFailed),
 			tag.NewFloat64("newMulti", curRateMultiplier),
 			tag.NewFloat64("newRate", rl.rateLimiter.Rate()),
 			tag.NewFloat64("latencyAvg", rl.healthSignals.AverageLatency()),

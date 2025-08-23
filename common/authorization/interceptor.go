@@ -9,9 +9,9 @@ import (
 
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/namespace"
 	"google.golang.org/grpc"
@@ -133,7 +133,7 @@ func (a *Interceptor) Intercept(
 		var err error
 		claims, err = a.GetClaims(authInfo)
 		if err != nil {
-			a.logger.Error("Authorization error", tag.Error(err))
+			log.ErrorWithCode(a.logger, errorcode.FrontendInsufficientPerms, "Authorization error", err)
 			// return a generic error to the caller without disclosing details
 			return nil, errUnauthorized
 		}
@@ -225,10 +225,11 @@ func (a *Interceptor) Authorize(ctx context.Context, claims *Claims, ct *CallTar
 	metrics.ServiceAuthorizationLatency.With(mh).Record(time.Since(startTime))
 	if err != nil {
 		metrics.ServiceErrAuthorizeFailedCounter.With(mh).Record(1)
-		a.logger.Error("Authorization error", tag.Error(err))
+		log.ErrorWithCode(a.logger, errorcode.FrontendInsufficientPerms, "Authorization error", err)
 		if a.exposeAuthorizerErrors() {
 			return err
 		}
+
 		return errUnauthorized // return a generic error to the caller without disclosing details
 	}
 	if result.Decision != DecisionAllow {

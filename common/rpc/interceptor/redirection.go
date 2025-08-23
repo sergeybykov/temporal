@@ -13,6 +13,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -212,7 +213,7 @@ func (i *Redirection) Intercept(
 
 	// This should not happen unless new API is added without updating localAPIResponses and  globalAPIResponses maps.
 	// Also covered by unit test.
-	i.logger.Warn("Redirection encountered unknown API", tag.Name(info.FullMethod))
+	log.WarnWithCode(i.logger, errorcode.CommonNexusOperationFailed, "Redirection encountered unknown API", tag.Name(info.FullMethod))
 	return handler(ctx, req)
 }
 

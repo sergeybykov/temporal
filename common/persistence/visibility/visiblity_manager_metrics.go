@@ -6,6 +6,7 @@ import (
 
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -119,7 +120,7 @@ func (m *visibilityManagerMetrics) ListWorkflowExecutions(
 	response, err := m.delegate.ListWorkflowExecutions(ctx, request)
 	elapsed := time.Since(startTime)
 	if elapsed > m.slowQueryThreshold() {
-		m.logger.Warn("List query exceeded threshold",
+		log.WarnWithCode(m.logger, errorcode.CommonVisibilityManagerMetricsOperationFailed, "List query exceeded threshold",
 			tag.NewDurationTag("duration", elapsed),
 			tag.NewStringTag("visibility-query", request.Query),
 			tag.NewStringerTag("namepsace", request.Namespace),
@@ -137,7 +138,7 @@ func (m *visibilityManagerMetrics) ScanWorkflowExecutions(
 	response, err := m.delegate.ScanWorkflowExecutions(ctx, request)
 	elapsed := time.Since(startTime)
 	if elapsed > m.slowQueryThreshold() {
-		m.logger.Warn("Count query exceeded threshold",
+		log.WarnWithCode(m.logger, errorcode.CommonVisibilityManagerMetricsOperationFailed, "Count query exceeded threshold",
 			tag.NewDurationTag("duration", elapsed),
 			tag.NewStringTag("visibility-query", request.Query),
 			tag.NewStringerTag("namepsace", request.Namespace),
@@ -200,7 +201,7 @@ func (m *visibilityManagerMetrics) updateErrorMetric(handler metrics.Handler, er
 		metrics.VisibilityPersistenceResourceExhausted.With(handler).Record(
 			1, metrics.ResourceExhaustedCauseTag(err.Cause), metrics.ResourceExhaustedScopeTag(err.Scope))
 	default:
-		m.logger.Error("Operation failed with an error.", tag.Error(err))
+		log.ErrorWithCode(m.logger, errorcode.CommonVisibilityManagerMetricsOperationFailed, "Operation failed with an error.", err)
 		metrics.VisibilityPersistenceFailures.With(handler).Record(1)
 	}
 

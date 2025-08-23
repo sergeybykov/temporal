@@ -1,7 +1,8 @@
 package cassandra
 
 import (
-	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/schema/cassandra"
 	"go.temporal.io/server/tools/common/schema/test"
 )
@@ -13,7 +14,7 @@ type UpdateSchemaTestSuite struct {
 func (s *UpdateSchemaTestSuite) SetupSuite() {
 	client, err := newTestCQLClient(systemKeyspace)
 	if err != nil {
-		s.Logger.Fatal("Error creating CQLClient", tag.Error(err))
+		log.FatalWithCode(s.Logger, errorcode.ToolsCassandraError2, "Error creating CQLClient", err)
 	}
 	s.SetupSuiteBase(client, "")
 }

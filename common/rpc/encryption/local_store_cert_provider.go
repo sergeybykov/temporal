@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 )
@@ -507,7 +508,7 @@ func (s *localStoreCertProvider) refreshCerts() {
 
 		newCerts, err := s.loadCerts()
 		if err != nil {
-			s.logger.Error("failed to load certificates", tag.Error(err))
+			log.ErrorWithCode(s.logger, errorcode.InfraServiceStartupFailed, "failed to load certificates", err)
 			continue
 		}
 

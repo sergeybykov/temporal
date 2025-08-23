@@ -8,6 +8,7 @@ import (
 
 	"github.com/gocql/gocql"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -69,7 +70,7 @@ func (s *session) refresh() {
 	defer s.Unlock()
 
 	if time.Now().UTC().Sub(s.sessionInitTime) < sessionRefreshMinInternal {
-		s.logger.Warn("gocql wrapper: did not refresh gocql session because the last refresh was too close",
+		log.WarnWithCode(s.logger, errorcode.CommonPersistenceMetricClientOperationFailed, "gocql wrapper: did not refresh gocql session because the last refresh was too close",
 			tag.NewDurationTag("min_refresh_interval_seconds", sessionRefreshMinInternal))
 		handler := s.metricsHandler.WithTags(metrics.FailureTag(refreshThrottleTagValue))
 		metrics.CassandraSessionRefreshFailures.With(handler).Record(1)
@@ -78,7 +79,7 @@ func (s *session) refresh() {
 
 	newSession, err := initSession(s.logger, s.newClusterConfigFunc, s.metricsHandler)
 	if err != nil {
-		s.logger.Error("gocql wrapper: unable to refresh gocql session", tag.Error(err))
+		log.ErrorWithCode(s.logger, errorcode.InfraDBConnectionFailed, "gocql wrapper: unable to refresh gocql session", err)
 		handler := s.metricsHandler.WithTags(metrics.FailureTag(refreshErrorTagValue))
 		metrics.CassandraSessionRefreshFailures.With(handler).Record(1)
 		return
@@ -88,7 +89,7 @@ func (s *session) refresh() {
 	oldSession := s.Value.Load().(*gocql.Session)
 	s.Value.Store(newSession)
 	go oldSession.Close()
-	s.logger.Warn("gocql wrapper: successfully refreshed gocql session")
+	log.WarnWithCode(s.logger, errorcode.CommonPersistenceMetricClientOperationFailed, "gocql wrapper: successfully refreshed gocql session")
 }
 
 func initSession(

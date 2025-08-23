@@ -7,6 +7,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/collection"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/service/history/queues"
@@ -56,7 +57,7 @@ func HTTPCallerProviderProvider(
 					} else {
 						frontendClient, err = httpClientCache.Get(clusterName)
 						if err != nil {
-							logger.Warn(
+							log.WarnWithCode(logger, errorcode.ComponentCallbacksError,
 								"HTTPCallerProviderProvider unable to get FrontendHTTPClient for callback target cluster. Using default HTTP client.",
 								tag.SourceCluster(clusterMetadata.GetCurrentClusterName()),
 								tag.TargetCluster(clusterName),

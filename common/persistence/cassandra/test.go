@@ -10,6 +10,7 @@ import (
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/debug"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -144,7 +145,7 @@ func (s *TestCluster) CreateSession(
 		nil,
 	)
 	if err != nil {
-		s.logger.Fatal("CreateSession", tag.Error(err))
+		log.FatalWithCode(s.logger, errorcode.CommonPersistenceMetricClientOperationFailed, "CreateSession", err)
 	}
 	s.logger.Debug("created session", tag.NewStringTag("keyspace", keyspace))
 }
@@ -153,7 +154,7 @@ func (s *TestCluster) CreateSession(
 func (s *TestCluster) CreateDatabase() {
 	err := CreateCassandraKeyspace(s.session, s.DatabaseName(), 1, true, s.logger)
 	if err != nil {
-		s.logger.Fatal("CreateCassandraKeyspace", tag.Error(err))
+		log.FatalWithCode(s.logger, errorcode.CommonPersistenceMetricClientOperationFailed, "CreateCassandraKeyspace", err)
 	}
 	s.logger.Info("created database", tag.NewStringTag("database", s.DatabaseName()))
 }
@@ -162,7 +163,7 @@ func (s *TestCluster) CreateDatabase() {
 func (s *TestCluster) DropDatabase() {
 	err := DropCassandraKeyspace(s.session, s.DatabaseName(), s.logger)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
-		s.logger.Fatal("DropCassandraKeyspace", tag.Error(err))
+		log.FatalWithCode(s.logger, errorcode.CommonPersistenceMetricClientOperationFailed, "DropCassandraKeyspace", err)
 	}
 	s.logger.Info("dropped database", tag.NewStringTag("database", s.DatabaseName()))
 }
@@ -171,11 +172,11 @@ func (s *TestCluster) DropDatabase() {
 func (s *TestCluster) LoadSchema(schemaFile string) {
 	statements, err := p.LoadAndSplitQuery([]string{schemaFile})
 	if err != nil {
-		s.logger.Fatal("LoadSchema", tag.Error(err))
+		log.FatalWithCode(s.logger, errorcode.CommonPersistenceMetricClientOperationFailed, "LoadSchema", err)
 	}
 	for _, stmt := range statements {
 		if err = s.session.Query(stmt).Exec(); err != nil {
-			s.logger.Fatal("LoadSchema", tag.Error(err))
+			log.FatalWithCode(s.logger, errorcode.CommonPersistenceMetricClientOperationFailed, "LoadSchema", err)
 		}
 	}
 	s.logger.Info("loaded schema")

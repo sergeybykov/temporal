@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/tools/common/schema/test"
 	"go.temporal.io/server/tools/sql"
 )
@@ -54,7 +54,7 @@ func (s *SQLConnTestSuite) SetupSuite() {
 	conn, err := newTestConn("", s.host, s.port, s.pluginName)
 	if err != nil {
 		logger := log.NewTestLogger()
-		logger.Fatal("error creating sql conn", tag.Error(err))
+		log.FatalWithCode(logger, errorcode.ToolsSqlClitestError, "error creating sql conn", err)
 	}
 	s.SetupSuiteBase(conn)
 }

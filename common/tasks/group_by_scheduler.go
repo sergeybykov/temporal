@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 )
 
@@ -57,7 +58,7 @@ func (s *GroupByScheduler[K, T]) Stop() {
 	s.mu.Unlock()
 
 	if success := common.BlockWithTimeout(s.waitShutdown, time.Minute); !success {
-		s.options.Logger.Warn("GroupByScheduler timed out waiting for groups to complete shutdown")
+		log.WarnWithCode(s.options.Logger, errorcode.CommonTaskSchedulerOperationFailed, "GroupByScheduler timed out waiting for groups to complete shutdown")
 	} else {
 		s.options.Logger.Debug("GroupByScheduler shutdown complete")
 	}
