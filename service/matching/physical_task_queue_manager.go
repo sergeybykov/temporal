@@ -22,6 +22,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/contextutil"
 	"go.temporal.io/server/common/debug"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -489,7 +490,7 @@ func (c *physicalTaskQueueManagerImpl) DispatchNexusTask(
 			opTimeout, err := time.ParseDuration(opTimeoutHeader)
 			if err != nil {
 				// Operation-Timeout header is not required so don't fail request on parsing errors.
-				c.logger.Warn(fmt.Sprintf("unable to parse %v header: %v", nexus.HeaderOperationTimeout, opTimeoutHeader), tag.Error(err), tag.WorkflowNamespaceID(request.NamespaceId))
+				log.WarnWithCode(c.logger, errorcode.MatchingHeaderParsingFailed, fmt.Sprintf("unable to parse %v header: %v", nexus.HeaderOperationTimeout, opTimeoutHeader), tag.Error(err), tag.WorkflowNamespaceID(request.NamespaceId))
 			} else {
 				opDeadline = time.Now().Add(opTimeout)
 			}
@@ -618,7 +619,7 @@ func (c *physicalTaskQueueManagerImpl) ensureRegisteredInDeploymentVersion(
 		// release the lock
 		case c.deploymentRegistrationCh <- struct{}{}:
 		default:
-			c.logger.Error("deploymentRegistrationCh is already unlocked")
+			log.ErrorWithCode(c.logger, errorcode.MatchingDeploymentRegistrationError, "deploymentRegistrationCh is already unlocked", nil)
 		}
 	}()
 
@@ -662,7 +663,7 @@ func (c *physicalTaskQueueManagerImpl) ensureRegisteredInDeploymentVersion(
 			err = errMaxDeploymentsInNamespace
 		} else {
 			// Do not surface low level error to user
-			c.logger.Error("error while registering version", tag.Error(err))
+			log.ErrorWithCode(c.logger, errorcode.MatchingDeploymentVersionRegistrationError, "error while registering version", err)
 			err = errDeploymentVersionNotReady
 		}
 		// Before retrying the error, hold the poller for some time so it does not retry immediately
@@ -685,7 +686,7 @@ func (c *physicalTaskQueueManagerImpl) ensureRegisteredInDeploymentVersion(
 		select {
 		case <-userDataChanged:
 		case <-ctx.Done():
-			c.logger.Error("timed out waiting for worker deployment version to appear in user data")
+			log.ErrorWithCode(c.logger, errorcode.MatchingDeploymentVersionWaitTimeout, "timed out waiting for worker deployment version to appear in user data", nil)
 			return ctx.Err()
 		}
 	}

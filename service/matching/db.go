@@ -11,6 +11,7 @@ import (
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	persistencespb "go.temporal.io/server/api/persistence/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -354,6 +355,7 @@ func (db *taskQueueDB) updateBacklogStatsLocked(subqueue subqueueIndex, countDel
 	count := &db.subqueues[subqueue].ApproximateBacklogCount
 	if *count+countDelta < 0 {
 		db.logger.Info("ApproximateBacklogCount could have under-counted.",
+			tag.ErrorCode(errorcode.MatchingMatchingPritaskreaderError),
 			tag.WorkerBuildId(db.queue.Version().MetricsTagValue()),
 			tag.WorkflowNamespaceID(db.queue.Partition().NamespaceId()))
 		*count = 0
@@ -586,9 +588,8 @@ func (db *taskQueueDB) CompleteTasksLessThan(
 		Limit:              limit,
 	})
 	if err != nil {
-		db.logger.Error("Persistent store operation failure",
+		log.ErrorWithCode(db.logger, errorcode.MatchingTaskStoreOperationFailed, "Persistent store operation failure", err,
 			tag.StoreOperationCompleteTasksLessThan,
-			tag.Error(err),
 			tag.TaskID(exclusiveMaxTaskID),
 			tag.WorkflowTaskQueueType(db.queue.TaskType()),
 			tag.WorkflowTaskQueueName(db.queue.PersistenceName()),
@@ -616,9 +617,8 @@ func (db *taskQueueDB) CompleteFairTasksLessThan(
 		Limit:              limit,
 	})
 	if err != nil {
-		db.logger.Error("Persistent store operation failure",
+		log.ErrorWithCode(db.logger, errorcode.MatchingTaskStoreOperationFailed, "Persistent store operation failure", err,
 			tag.StoreOperationCompleteTasksLessThan,
-			tag.Error(err),
 			tag.AckLevel(exclusiveMaxLevel),
 			tag.WorkflowTaskQueueType(db.queue.TaskType()),
 			tag.WorkflowTaskQueueName(db.queue.PersistenceName()),
