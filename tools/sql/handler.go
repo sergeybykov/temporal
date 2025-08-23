@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli"
 	"go.temporal.io/server/common/auth"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/tools/common/schema"
@@ -19,17 +20,17 @@ import (
 func setupSchema(cli *cli.Context, logger log.Logger) error {
 	cfg, err := parseConnectConfig(cli)
 	if err != nil {
-		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())))
+		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())), tag.ErrorCode(errorcode.ToolsSQLOperationFailed))
 		return err
 	}
 	conn, err := NewConnection(cfg, logger)
 	if err != nil {
-		logger.Error("Unable to connect to SQL database.", tag.Error(err))
+		logger.Error("Unable to connect to SQL database.", tag.Error(err), tag.ErrorCode(errorcode.ToolsSQLOperationFailed))
 		return err
 	}
 	defer conn.Close()
 	if err := schema.Setup(cli, conn, logger); err != nil {
-		logger.Error("Unable to setup SQL schema.", tag.Error(err))
+		logger.Error("Unable to setup SQL schema.", tag.Error(err), tag.ErrorCode(errorcode.ToolsSQLOperationFailed))
 		return err
 	}
 	return nil
@@ -40,17 +41,17 @@ func setupSchema(cli *cli.Context, logger log.Logger) error {
 func updateSchema(cli *cli.Context, logger log.Logger) error {
 	cfg, err := parseConnectConfig(cli)
 	if err != nil {
-		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())))
+		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())), tag.ErrorCode(errorcode.ToolsSQLOperationFailed))
 		return err
 	}
 	conn, err := NewConnection(cfg, logger)
 	if err != nil {
-		logger.Error("Unable to connect to SQL database.", tag.Error(err))
+		logger.Error("Unable to connect to SQL database.", tag.Error(err), tag.ErrorCode(errorcode.ToolsSQLOperationFailed))
 		return err
 	}
 	defer conn.Close()
 	if err := schema.Update(cli, conn, logger); err != nil {
-		logger.Error("Unable to update SQL schema.", tag.Error(err))
+		logger.Error("Unable to update SQL schema.", tag.Error(err), tag.ErrorCode(errorcode.ToolsSQLOperationFailed))
 		return err
 	}
 	return nil
@@ -60,13 +61,13 @@ func updateSchema(cli *cli.Context, logger log.Logger) error {
 func createDatabase(cli *cli.Context, logger log.Logger) error {
 	cfg, err := parseConnectConfig(cli)
 	if err != nil {
-		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())))
+		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())), tag.ErrorCode(errorcode.ToolsSQLOperationFailed))
 		return err
 	}
 	defaultDb := cli.String(schema.CLIOptDefaultDb)
 	err = DoCreateDatabase(cfg, defaultDb, logger)
 	if err != nil {
-		logger.Error("Unable to create SQL database.", tag.Error(err))
+		logger.Error("Unable to create SQL database.", tag.Error(err), tag.ErrorCode(errorcode.ToolsSQLOperationFailed))
 		return err
 	}
 	return nil
@@ -87,13 +88,13 @@ func DoCreateDatabase(cfg *config.SQL, defaultDb string, logger log.Logger) erro
 func dropDatabase(cli *cli.Context, logger log.Logger) error {
 	cfg, err := parseConnectConfig(cli)
 	if err != nil {
-		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())))
+		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())), tag.ErrorCode(errorcode.ToolsSQLOperationFailed))
 		return err
 	}
 	defaultDb := cli.String(schema.CLIOptDefaultDb)
 	err = DoDropDatabase(cfg, defaultDb, logger)
 	if err != nil {
-		logger.Error("Unable to drop SQL database.", tag.Error(err))
+		logger.Error("Unable to drop SQL database.", tag.Error(err), tag.ErrorCode(errorcode.ToolsSQLOperationFailed))
 		return err
 	}
 	return nil

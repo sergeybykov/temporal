@@ -19,6 +19,7 @@ import (
 	"go.temporal.io/server/api/matchingservice/v1"
 	workflowspb "go.temporal.io/server/api/workflow/v1"
 	"go.temporal.io/server/common/backoff"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -622,8 +623,8 @@ func ValidateLongPollContextTimeout(
 	timeout := time.Until(deadline)
 	if timeout < MinLongPollTimeout {
 		err := ErrContextTimeoutTooShort
-		logger.Error("Context timeout is too short for long poll API.",
-			tag.WorkflowHandlerName(handlerName), tag.Error(err), tag.WorkflowPollContextTimeout(timeout))
+		log.ErrorWithCode(logger, errorcode.CommonUtilityOperationFailed, "Context timeout is too short for long poll API.",
+			err, tag.WorkflowHandlerName(handlerName), tag.WorkflowPollContextTimeout(timeout))
 		return err
 	}
 	if timeout < CriticalLongPollTimeout {
@@ -643,8 +644,8 @@ func ValidateLongPollContextTimeoutIsSet(
 	deadline, ok := ctx.Deadline()
 	if !ok {
 		err := ErrContextTimeoutNotSet
-		logger.Error("Context timeout not set for long poll API.",
-			tag.WorkflowHandlerName(handlerName), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonUtilityOperationFailed, "Context timeout not set for long poll API.",
+			err, tag.WorkflowHandlerName(handlerName))
 		return deadline, err
 	}
 	return deadline, nil

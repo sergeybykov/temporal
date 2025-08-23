@@ -6,8 +6,8 @@ import (
 
 	"go.temporal.io/api/serviceerror"
 	persistencespb "go.temporal.io/server/api/persistence/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/persistence/serialization"
 )
 
@@ -58,7 +58,7 @@ func (m *nexusEndpointManagerImpl) GetNexusEndpoint(
 
 	endpoint, err := m.serializer.NexusEndpointFromBlob(internalEndpoint.Data)
 	if err != nil {
-		m.logger.Error(fmt.Sprintf("error deserializing nexus endpoint with ID:%v", internalEndpoint.ID), tag.Error(err))
+		log.ErrorWithCode(m.logger, errorcode.CommonNexusEndpointManagerOperationFailed, fmt.Sprintf("error deserializing nexus endpoint with ID:%v", internalEndpoint.ID), err)
 		return nil, err
 	}
 
@@ -91,7 +91,7 @@ func (m *nexusEndpointManagerImpl) ListNexusEndpoints(
 	for i, entry := range resp.Endpoints {
 		endpoint, err := m.serializer.NexusEndpointFromBlob(entry.Data)
 		if err != nil {
-			m.logger.Error(fmt.Sprintf("error deserializing nexus endpoint with ID: %v", entry.ID), tag.Error(err))
+			log.ErrorWithCode(m.logger, errorcode.CommonNexusEndpointManagerOperationFailed, fmt.Sprintf("error deserializing nexus endpoint with ID: %v", entry.ID), err)
 			return nil, err
 		}
 		entries[i] = &persistencespb.NexusEndpointEntry{

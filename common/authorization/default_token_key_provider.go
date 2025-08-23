@@ -13,8 +13,8 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	"github.com/golang-jwt/jwt/v4"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.uber.org/multierr"
 )
 
@@ -43,7 +43,7 @@ func (a *defaultTokenKeyProvider) initialize() {
 	if a.config.HasSourceURIsConfigured() {
 		err := a.updateKeys()
 		if err != nil {
-			a.logger.Error("error during initial retrieval of token keys: ", tag.Error(err))
+			log.ErrorWithCode(a.logger, errorcode.FrontendAuthRequired, "error during initial retrieval of token keys: ", err)
 		}
 	}
 	if a.config.RefreshInterval > 0 {
@@ -101,7 +101,7 @@ func (a *defaultTokenKeyProvider) timerCallback() {
 		if a.config.HasSourceURIsConfigured() {
 			err := a.updateKeys()
 			if err != nil {
-				a.logger.Error("error while refreshing token keys: ", tag.Error(err))
+				log.ErrorWithCode(a.logger, errorcode.FrontendAuthRequired, "error while refreshing token keys: ", err)
 			}
 		}
 	}

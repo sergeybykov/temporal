@@ -17,6 +17,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/future"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -136,7 +137,7 @@ func (p *processorImpl) Stop() {
 	err := p.bulkProcessor.Stop()
 	if err != nil {
 		// This could happen if ES is down when we're trying to shut down the server.
-		p.logger.Error("Unable to stop Elasticsearch processor.", tag.LifeCycleStopFailed, tag.Error(err))
+		log.ErrorWithCode(p.logger, errorcode.PersistElasticsearchProcessorOperationFailed, "Unable to stop Elasticsearch processor.", err, tag.LifeCycleStopFailed)
 		return
 	}
 }
@@ -227,7 +228,7 @@ func (p *processorImpl) bulkAfterAction(_ int64, requests []elastic.BulkableRequ
 			}
 			p.notifyResult(visibilityTaskKey, false)
 		}
-		p.logger.Error("Unable to commit bulk ES request.", tag.Error(err), tag.RequestCount(len(requests)), tag.ESRequest(logRequests.String()))
+		log.ErrorWithCode(p.logger, errorcode.PersistElasticsearchProcessorOperationFailed, "Unable to commit bulk ES request.", err, tag.RequestCount(len(requests)), tag.ESRequest(logRequests.String()))
 		return
 	}
 
@@ -245,7 +246,7 @@ func (p *processorImpl) bulkAfterAction(_ int64, requests []elastic.BulkableRequ
 		docID := p.extractDocID(request)
 		responseItem, ok := responseIndex[docID]
 		if !ok {
-			p.logger.Error("ES request failed. Request item doesn't have corresponding response item.",
+			log.ErrorWithCode(p.logger, errorcode.PersistElasticsearchProcessorOperationFailed, "ES request failed. Request item doesn't have corresponding response item.", nil,
 				tag.Value(i),
 				tag.Key(visibilityTaskKey),
 				tag.ESDocID(docID),
@@ -256,7 +257,7 @@ func (p *processorImpl) bulkAfterAction(_ int64, requests []elastic.BulkableRequ
 		}
 
 		if !isSuccess(responseItem) {
-			p.logger.Error("ES request failed.",
+			log.ErrorWithCode(p.logger, errorcode.PersistElasticsearchProcessorOperationFailed, "ES request failed.", nil,
 				tag.ESResponseStatus(responseItem.Status),
 				tag.ESResponseError(extractErrorReason(responseItem)),
 				tag.Key(visibilityTaskKey),
@@ -307,7 +308,7 @@ func (p *processorImpl) notifyResult(visibilityTaskKey string, ack bool) {
 func (p *processorImpl) extractVisibilityTaskKey(request elastic.BulkableRequest) string {
 	req, err := request.Source()
 	if err != nil {
-		p.logger.Error("Unable to get ES request source.", tag.Error(err), tag.ESRequest(request.String()))
+		log.ErrorWithCode(p.logger, errorcode.PersistElasticsearchProcessorOperationFailed, "Unable to get ES request source.", err, tag.ESRequest(request.String()))
 		metrics.ElasticsearchBulkProcessorCorruptedData.With(p.metricsHandler).Record(1)
 		return ""
 	}
@@ -315,14 +316,14 @@ func (p *processorImpl) extractVisibilityTaskKey(request elastic.BulkableRequest
 	if len(req) == 2 { // index or update requests
 		var body map[string]interface{}
 		if err = json.Unmarshal([]byte(req[1]), &body); err != nil {
-			p.logger.Error("Unable to unmarshal ES request body.", tag.Error(err))
+			log.ErrorWithCode(p.logger, errorcode.PersistElasticsearchProcessorOperationFailed, "Unable to unmarshal ES request body.", err)
 			metrics.ElasticsearchBulkProcessorCorruptedData.With(p.metricsHandler).Record(1)
 			return ""
 		}
 
 		k, ok := body[searchattribute.VisibilityTaskKey]
 		if !ok {
-			p.logger.Error("Unable to extract VisibilityTaskKey from ES request.", tag.ESRequest(request.String()))
+			log.ErrorWithCode(p.logger, errorcode.PersistElasticsearchProcessorOperationFailed, "Unable to extract VisibilityTaskKey from ES request.", nil, tag.ESRequest(request.String()))
 			metrics.ElasticsearchBulkProcessorCorruptedData.With(p.metricsHandler).Record(1)
 			return ""
 		}
@@ -335,7 +336,7 @@ func (p *processorImpl) extractVisibilityTaskKey(request elastic.BulkableRequest
 func (p *processorImpl) extractDocID(request elastic.BulkableRequest) string {
 	req, err := request.Source()
 	if err != nil {
-		p.logger.Error("Unable to get ES request source.", tag.Error(err), tag.ESRequest(request.String()))
+		log.ErrorWithCode(p.logger, errorcode.PersistElasticsearchProcessorOperationFailed, "Unable to get ES request source.", err, tag.ESRequest(request.String()))
 		metrics.ElasticsearchBulkProcessorCorruptedData.With(p.metricsHandler).Record(1)
 
 		return ""
@@ -343,7 +344,7 @@ func (p *processorImpl) extractDocID(request elastic.BulkableRequest) string {
 
 	var body map[string]map[string]interface{}
 	if err = json.Unmarshal([]byte(req[0]), &body); err != nil {
-		p.logger.Error("Unable to unmarshal ES request body.", tag.Error(err), tag.ESRequest(request.String()))
+		log.ErrorWithCode(p.logger, errorcode.PersistElasticsearchProcessorOperationFailed, "Unable to unmarshal ES request body.", err, tag.ESRequest(request.String()))
 		metrics.ElasticsearchBulkProcessorCorruptedData.With(p.metricsHandler).Record(1)
 		return ""
 	}
@@ -356,7 +357,7 @@ func (p *processorImpl) extractDocID(request elastic.BulkableRequest) string {
 		}
 	}
 
-	p.logger.Error("Unable to extract _id from ES request.", tag.ESRequest(request.String()))
+	log.ErrorWithCode(p.logger, errorcode.PersistElasticsearchProcessorOperationFailed, "Unable to extract _id from ES request.", nil, tag.ESRequest(request.String()))
 	metrics.ElasticsearchBulkProcessorCorruptedData.With(p.metricsHandler).Record(1)
 	return ""
 }

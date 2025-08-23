@@ -8,6 +8,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 )
@@ -125,7 +126,7 @@ func (f *FIFOScheduler[T]) updateWorkerCount(targetWorkerNum int) {
 	}
 
 	if targetWorkerNum < 0 {
-		f.logger.Error("Target worker pool size is negative. Please fix the dynamic config.", tag.Key("worker-pool-size"), tag.Value(targetWorkerNum))
+		log.ErrorWithCode(f.logger, errorcode.InfraTaskSchedulerOperationFailed, "Target worker pool size is negative. Please fix the dynamic config.", nil, tag.Key("worker-pool-size"), tag.Value(targetWorkerNum))
 		return
 	}
 

@@ -15,6 +15,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/goro"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
@@ -396,7 +397,7 @@ func (m *metadataImpl) refreshLoop(ctx context.Context) error {
 			return nil
 		case <-timer.C:
 			for err := m.refreshClusterMetadata(ctx); err != nil; err = m.refreshClusterMetadata(ctx) {
-				m.logger.Error("Error refreshing remote cluster metadata", tag.Error(err))
+				log.ErrorWithCode(m.logger, errorcode.InfraClusterMetadataRefreshFailed, "Error refreshing remote cluster metadata", err)
 				refreshTimer := time.NewTimer(m.refreshDuration() / 2)
 
 				select {

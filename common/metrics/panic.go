@@ -4,6 +4,7 @@ import (
 	"runtime/debug"
 
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 )
@@ -22,7 +23,7 @@ func CapturePanic(logger log.Logger, metricHandler Handler, retError *error) {
 
 		st := string(debug.Stack())
 
-		logger.Error("Panic is captured", tag.SysStackTrace(st), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonMetricsOperationFailed, "Panic is captured", err, tag.SysStackTrace(st))
 
 		ServicePanic.With(metricHandler).Record(1)
 		*retError = serviceerror.NewInternal(err.Error())

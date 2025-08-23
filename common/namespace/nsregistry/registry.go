@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/server/common/dynamicconfig"
 	"go.temporal.io/server/common/goro"
 	"go.temporal.io/server/common/headers"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -320,7 +321,7 @@ func (r *registry) refreshLoop(ctx context.Context) error {
 		case <-timer.C:
 			err := r.refreshNamespaces(ctx)
 			for err != nil {
-				r.logger.Error("Error refreshing namespace cache", tag.Error(err))
+				log.ErrorWithCode(r.logger, errorcode.CommonNamespaceRegistryOperationFailed, "Error refreshing namespace cache", err)
 				timerFailureRetry := time.NewTimer(CacheRefreshFailureRetryInterval)
 				select {
 				case <-ctx.Done():

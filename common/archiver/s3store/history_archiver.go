@@ -22,6 +22,7 @@ import (
 	"go.temporal.io/server/common/archiver"
 	"go.temporal.io/server/common/codec"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -131,12 +132,12 @@ func (h *historyArchiver) Archive(
 	logger := archiver.TagLoggerWithArchiveHistoryRequestAndURI(h.logger, request, URI.String())
 
 	if err := SoftValidateURI(URI); err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
+		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err), tag.ErrorCode(errorcode.CommonHistoryArchivalOperationFailed))
 		return err
 	}
 
 	if err := archiver.ValidateHistoryArchiveRequest(request); err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err))
+		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err), tag.ErrorCode(errorcode.CommonHistoryArchivalOperationFailed))
 		return err
 	}
 
@@ -159,22 +160,22 @@ func (h *historyArchiver) Archive(
 
 			logger := log.With(logger, tag.ArchivalArchiveFailReason(archiver.ErrReasonReadHistory), tag.Error(err))
 			if common.IsPersistenceTransientError(err) {
-				logger.Error(archiver.ArchiveTransientErrorMsg)
+				logger.Error(archiver.ArchiveTransientErrorMsg, tag.ErrorCode(errorcode.CommonHistoryArchivalOperationFailed))
 			} else {
-				logger.Error(archiver.ArchiveNonRetryableErrorMsg)
+				logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ErrorCode(errorcode.CommonHistoryArchivalOperationFailed))
 			}
 			return err
 		}
 
 		if historyMutated(request, historyBlob.Body, historyBlob.Header.IsLast) {
-			logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonHistoryMutated))
+			logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonHistoryMutated), tag.ErrorCode(errorcode.CommonHistoryArchivalOperationFailed))
 			return archiver.ErrHistoryMutated
 		}
 
 		encoder := codec.NewJSONPBEncoder()
 		encodedHistoryBlob, err := encoder.Encode(historyBlob)
 		if err != nil {
-			logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errEncodeHistory), tag.Error(err))
+			logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errEncodeHistory), tag.Error(err), tag.ErrorCode(errorcode.CommonHistoryArchivalOperationFailed))
 			return err
 		}
 		key := constructHistoryKey(URI.Path(), request.NamespaceID, request.WorkflowID, request.RunID, request.CloseFailoverVersion, progress.BatchIdx)
@@ -182,9 +183,9 @@ func (h *historyArchiver) Archive(
 		exists, err := KeyExists(ctx, h.s3cli, URI, key)
 		if err != nil {
 			if isRetryableError(err) {
-				logger.Error(archiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason(errWriteKey), tag.Error(err))
+				logger.Error(archiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason(errWriteKey), tag.Error(err), tag.ErrorCode(errorcode.CommonArchivalUploadFailed))
 			} else {
-				logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errWriteKey), tag.Error(err))
+				logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errWriteKey), tag.Error(err), tag.ErrorCode(errorcode.CommonArchivalUploadFailed))
 			}
 			return err
 		}
@@ -194,9 +195,9 @@ func (h *historyArchiver) Archive(
 		} else {
 			if err := Upload(ctx, h.s3cli, URI, key, encodedHistoryBlob); err != nil {
 				if isRetryableError(err) {
-					logger.Error(archiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason(errWriteKey), tag.Error(err))
+					logger.Error(archiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason(errWriteKey), tag.Error(err), tag.ErrorCode(errorcode.CommonArchivalUploadFailed))
 				} else {
-					logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errWriteKey), tag.Error(err))
+					logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errWriteKey), tag.Error(err), tag.ErrorCode(errorcode.CommonArchivalUploadFailed))
 				}
 				return err
 			}

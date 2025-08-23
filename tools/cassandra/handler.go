@@ -7,6 +7,7 @@ import (
 	"github.com/urfave/cli"
 	"go.temporal.io/server/common/auth"
 	c "go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/temporal/environment"
@@ -27,17 +28,17 @@ type SetupSchemaConfig struct {
 func setupSchema(cli *cli.Context, logger log.Logger) error {
 	config, err := newCQLClientConfig(cli)
 	if err != nil {
-		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())))
+		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())), tag.ErrorCode(errorcode.ToolsCassandraOperationFailed))
 		return err
 	}
 	client, err := newCQLClient(config, logger)
 	if err != nil {
-		logger.Error("Unable to establish CQL session.", tag.Error(err))
+		logger.Error("Unable to establish CQL session.", tag.Error(err), tag.ErrorCode(errorcode.ToolsCassandraOperationFailed))
 		return err
 	}
 	defer client.Close()
 	if err := schema.Setup(cli, client, logger); err != nil {
-		logger.Error("Unable to setup CQL schema.", tag.Error(err))
+		logger.Error("Unable to setup CQL schema.", tag.Error(err), tag.ErrorCode(errorcode.ToolsCassandraOperationFailed))
 		return err
 	}
 	return nil
@@ -48,17 +49,17 @@ func setupSchema(cli *cli.Context, logger log.Logger) error {
 func updateSchema(cli *cli.Context, logger log.Logger) error {
 	config, err := newCQLClientConfig(cli)
 	if err != nil {
-		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())))
+		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())), tag.ErrorCode(errorcode.ToolsCassandraOperationFailed))
 		return err
 	}
 	client, err := newCQLClient(config, logger)
 	if err != nil {
-		logger.Error("Unable to establish CQL session.", tag.Error(err))
+		logger.Error("Unable to establish CQL session.", tag.Error(err), tag.ErrorCode(errorcode.ToolsCassandraOperationFailed))
 		return err
 	}
 	defer client.Close()
 	if err := schema.Update(cli, client, logger); err != nil {
-		logger.Error("Unable to update CQL schema.", tag.Error(err))
+		logger.Error("Unable to update CQL schema.", tag.Error(err), tag.ErrorCode(errorcode.ToolsCassandraOperationFailed))
 		return err
 	}
 	return nil
@@ -67,18 +68,18 @@ func updateSchema(cli *cli.Context, logger log.Logger) error {
 func createKeyspace(cli *cli.Context, logger log.Logger) error {
 	config, err := newCQLClientConfig(cli)
 	if err != nil {
-		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())))
+		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())), tag.ErrorCode(errorcode.ToolsCassandraOperationFailed))
 		return err
 	}
 	keyspace := cli.String(schema.CLIOptKeyspace)
 	if keyspace == "" {
 		err := fmt.Errorf("missing %s argument", flag(schema.CLIOptKeyspace))
-		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())))
+		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())), tag.ErrorCode(errorcode.ToolsCassandraOperationFailed))
 		return err
 	}
 	err = doCreateKeyspace(config, keyspace, logger)
 	if err != nil {
-		logger.Error("Unable to create keyspace.", tag.Error(err))
+		logger.Error("Unable to create keyspace.", tag.Error(err), tag.ErrorCode(errorcode.ToolsCassandraOperationFailed))
 		return err
 	}
 	return nil
@@ -87,18 +88,18 @@ func createKeyspace(cli *cli.Context, logger log.Logger) error {
 func dropKeyspace(cli *cli.Context, logger log.Logger) error {
 	config, err := newCQLClientConfig(cli)
 	if err != nil {
-		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())))
+		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())), tag.ErrorCode(errorcode.ToolsCassandraOperationFailed))
 		return err
 	}
 	keyspace := cli.String(schema.CLIOptKeyspace)
 	if keyspace == "" {
 		err := fmt.Errorf("missing %s argument", flag(schema.CLIOptKeyspace))
-		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())))
+		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())), tag.ErrorCode(errorcode.ToolsCassandraOperationFailed))
 		return err
 	}
 	err = doDropKeyspace(config, keyspace, logger)
 	if err != nil {
-		logger.Error("Unable to drop keyspace.", tag.Error(err))
+		logger.Error("Unable to drop keyspace.", tag.Error(err), tag.ErrorCode(errorcode.ToolsCassandraOperationFailed))
 		return err
 	}
 	return nil
@@ -107,7 +108,7 @@ func dropKeyspace(cli *cli.Context, logger log.Logger) error {
 func validateHealth(cli *cli.Context, logger log.Logger) error {
 	config, err := newCQLClientConfig(cli)
 	if err != nil {
-		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())))
+		logger.Error("Unable to read config.", tag.Error(schema.NewConfigError(err.Error())), tag.ErrorCode(errorcode.ToolsCassandraOperationFailed))
 		return err
 	}
 
@@ -115,7 +116,7 @@ func validateHealth(cli *cli.Context, logger log.Logger) error {
 
 	client, err := newCQLClient(config, logger)
 	if err != nil {
-		logger.Error("Unable to establish CQL session.", tag.Error(err))
+		logger.Error("Unable to establish CQL session.", tag.Error(err), tag.ErrorCode(errorcode.ToolsCassandraOperationFailed))
 		return err
 	}
 

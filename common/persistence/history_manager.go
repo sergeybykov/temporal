@@ -10,6 +10,8 @@ import (
 	"go.temporal.io/api/serviceerror"
 	persistencespb "go.temporal.io/server/api/persistence/v1"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/primitives/timestamp"
 )
@@ -931,7 +933,7 @@ func (m *executionManagerImpl) readHistoryBranch(
 			return nil, nil, nil, nil, dataSize, err
 		}
 		if len(events) == 0 {
-			m.logger.Error(dataLossMsg, dataLossTags(errEmptyEvents)...)
+			log.ErrorWithCode(m.logger, errorcode.PersistHistoryManagerOperationFailed, dataLossMsg, serviceerror.NewDataLoss(errEmptyEvents), dataLossTags(errEmptyEvents)...)
 			return nil, nil, nil, nil, dataSize, serviceerror.NewDataLoss(errEmptyEvents)
 		}
 
@@ -941,11 +943,11 @@ func (m *executionManagerImpl) readHistoryBranch(
 
 		if firstEvent.GetVersion() != lastEvent.GetVersion() || firstEvent.GetEventId()+int64(eventCount-1) != lastEvent.GetEventId() {
 			// in a single batch, version should be the same, and ID should be contiguous
-			m.logger.Error(dataLossMsg, dataLossTags(errWrongVersion)...)
+			log.ErrorWithCode(m.logger, errorcode.PersistHistoryManagerOperationFailed, dataLossMsg, serviceerror.NewDataLoss(errWrongVersion), dataLossTags(errWrongVersion)...)
 			return historyEvents, historyEventBatches, transactionIDs, nil, dataSize, serviceerror.NewDataLoss(errWrongVersion)
 		}
 		if firstEvent.GetEventId() != token.LastEventID+1 {
-			m.logger.Error(dataLossMsg, dataLossTags(errNonContiguousEventID)...)
+			log.ErrorWithCode(m.logger, errorcode.PersistHistoryManagerOperationFailed, dataLossMsg, serviceerror.NewDataLoss(errNonContiguousEventID), dataLossTags(errNonContiguousEventID)...)
 			return historyEvents, historyEventBatches, transactionIDs, nil, dataSize, serviceerror.NewDataLoss(errNonContiguousEventID)
 		}
 
@@ -998,7 +1000,7 @@ func (m *executionManagerImpl) readHistoryBranchReverse(
 			return nil, nil, nil, dataSize, err
 		}
 		if len(events) == 0 {
-			m.logger.Error(dataLossMsg, datalossTags(errEmptyEvents)...)
+			log.ErrorWithCode(m.logger, errorcode.PersistHistoryManagerOperationFailed, dataLossMsg, serviceerror.NewDataLoss(errEmptyEvents), datalossTags(errEmptyEvents)...)
 			return nil, nil, nil, dataSize, serviceerror.NewDataLoss(errEmptyEvents)
 		}
 
@@ -1008,11 +1010,11 @@ func (m *executionManagerImpl) readHistoryBranchReverse(
 
 		if firstEvent.GetVersion() != lastEvent.GetVersion() || firstEvent.GetEventId()+int64(eventCount-1) != lastEvent.GetEventId() {
 			// in a single batch, version should be the same, and ID should be contiguous
-			m.logger.Error(dataLossMsg, datalossTags(errWrongVersion)...)
+			log.ErrorWithCode(m.logger, errorcode.PersistHistoryManagerOperationFailed, dataLossMsg, serviceerror.NewDataLoss(errWrongVersion), datalossTags(errWrongVersion)...)
 			return historyEvents, transactionIDs, nil, dataSize, serviceerror.NewDataLoss(errWrongVersion)
 		}
 		if (token.LastEventID != common.EmptyEventID) && (lastEvent.GetEventId() != token.LastEventID-1) {
-			m.logger.Error(dataLossMsg, datalossTags(errNonContiguousEventID)...)
+			log.ErrorWithCode(m.logger, errorcode.PersistHistoryManagerOperationFailed, dataLossMsg, serviceerror.NewDataLoss(errNonContiguousEventID), datalossTags(errNonContiguousEventID)...)
 			return historyEvents, transactionIDs, nil, dataSize, serviceerror.NewDataLoss(errNonContiguousEventID)
 		}
 

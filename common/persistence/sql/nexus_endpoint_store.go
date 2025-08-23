@@ -7,8 +7,8 @@ import (
 	"fmt"
 
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	p "go.temporal.io/server/common/persistence"
 	"go.temporal.io/server/common/persistence/sql/sqlplugin"
 	"go.temporal.io/server/common/primitives"
@@ -61,7 +61,7 @@ func (s *sqlNexusEndpointStore) CreateOrUpdateNexusEndpoint(
 			return &p.ConditionFailedError{Msg: err.Error()}
 		}
 		if err != nil {
-			s.logger.Error("error during CreateOrUpdateNexusEndpoint", tag.Error(err))
+			log.ErrorWithCode(s.logger, errorcode.InfraNexusEndpointCreateUpdateFailed, "error during CreateOrUpdateNexusEndpoint", err)
 			return err
 		}
 
@@ -101,7 +101,7 @@ func (s *sqlNexusEndpointStore) GetNexusEndpoint(
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, serviceerror.NewNotFoundf("Nexus endpoint with ID `%v` not found", request.ID)
 		}
-		s.logger.Error(fmt.Sprintf("error getting Nexus endpoint with ID %v", request.ID), tag.Error(err))
+		log.ErrorWithCode(s.logger, errorcode.InfraNexusEndpointGetFailed, fmt.Sprintf("error getting Nexus endpoint with ID %v", request.ID), err)
 		return nil, serviceerror.NewUnavailable(err.Error())
 	}
 
@@ -159,7 +159,7 @@ func (s *sqlNexusEndpointStore) ListNexusEndpoints(
 			LastID: rows[request.PageSize-1].ID,
 		})
 		if retErr != nil {
-			s.logger.Error("error serializing next page token during ListNexusEndpoints", tag.Error(retErr))
+			log.ErrorWithCode(s.logger, errorcode.InfraNextPageTokenSerializationFailed, "error serializing next page token during ListNexusEndpoints", retErr)
 			return nil, serviceerror.NewInternal(retErr.Error())
 		}
 	}
@@ -188,19 +188,19 @@ func (s *sqlNexusEndpointStore) DeleteNexusEndpoint(
 		result, err := tx.IncrementNexusEndpointsTableVersion(ctx, request.LastKnownTableVersion)
 		err = checkUpdateResult(result, err, p.ErrNexusTableVersionConflict)
 		if err != nil {
-			s.logger.Error("error incrementing Nexus endpoints table version during DeleteNexusEndpoint call", tag.Error(err))
+			log.ErrorWithCode(s.logger, errorcode.InfraNexusEndpointsTableVersionIncrementFailed, "error incrementing Nexus endpoints table version during DeleteNexusEndpoint call", err)
 			return serviceerror.NewInternal(err.Error())
 		}
 
 		result, err = tx.DeleteFromNexusEndpoints(ctx, id)
 		if err != nil {
-			s.logger.Error("DeleteNexusEndpoint operation failed", tag.Error(err))
+			log.ErrorWithCode(s.logger, errorcode.InfraNexusEndpointDeleteOperationFailed, "DeleteNexusEndpoint operation failed", err)
 			return serviceerror.NewUnavailable(err.Error())
 		}
 
 		nRows, err := result.RowsAffected()
 		if err != nil {
-			s.logger.Error("error getting RowsAffected during DeleteNexusEndpoint", tag.Error(err))
+			log.ErrorWithCode(s.logger, errorcode.InfraNexusEndpointDeleteRowsAffectedError, "error getting RowsAffected during DeleteNexusEndpoint", err)
 			return serviceerror.NewUnavailablef("rowsAffected returned error: %v", err)
 		}
 		if nRows != 1 {

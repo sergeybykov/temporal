@@ -26,6 +26,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -322,7 +323,7 @@ func (svc *ServicesMetadata) Stop(ctx context.Context) {
 	defer cancelFunc()
 	err := svc.app.Stop(stopCtx)
 	if err != nil {
-		svc.logger.Error("Failed to stop service", tag.Service(svc.serviceName), tag.Error(err))
+		log.ErrorWithCode(svc.logger, errorcode.InfraServiceShutdownFailed, "Failed to stop service", err, tag.Service(svc.serviceName))
 	}
 }
 
@@ -626,7 +627,7 @@ func ApplyClusterMetadataConfigProvider(
 			tag.Key("clusterInformation"))
 	}
 	if _, ok := clusterMetadata.ClusterInformation[clusterMetadata.CurrentClusterName]; !ok {
-		logger.Error("Current cluster setting is missing under clusterMetadata.ClusterInformation",
+		log.ErrorWithCode(logger, errorcode.InfraClusterMetadataConfigurationError, "Current cluster setting is missing under clusterMetadata.ClusterInformation", nil,
 			tag.ClusterName(clusterMetadata.CurrentClusterName))
 		return svc.ClusterMetadata, svc.Persistence, missingCurrentClusterMetadataErr
 	}
@@ -718,7 +719,7 @@ func initCurrentClusterMetadataRecord(
 		return err
 	}
 	if !applied {
-		logger.Error("Failed to apply cluster metadata.", tag.ClusterName(currentClusterName))
+		log.ErrorWithCode(logger, errorcode.InfraClusterMetadataConfigurationError, "Failed to apply cluster metadata.", nil, tag.ClusterName(currentClusterName))
 		return clusterMetadataInitErr
 	}
 	return nil
@@ -1039,7 +1040,7 @@ func (l *fxLogAdapter) LogEvent(e fxevent.Event) {
 		)
 	case *fxevent.OnStartExecuted:
 		if e.Err != nil {
-			l.logger.Error("OnStart hook failed",
+			log.ErrorWithCode(l.logger, errorcode.InfraServiceLifecycleHookFailed, "OnStart hook failed", nil,
 				tag.ComponentFX,
 				tag.NewStringTag("callee", e.FunctionName),
 				tag.NewStringTag("caller", e.CallerName),
@@ -1061,7 +1062,7 @@ func (l *fxLogAdapter) LogEvent(e fxevent.Event) {
 		)
 	case *fxevent.OnStopExecuted:
 		if e.Err != nil {
-			l.logger.Error("OnStop hook failed",
+			log.ErrorWithCode(l.logger, errorcode.InfraServiceLifecycleHookFailed, "OnStop hook failed", nil,
 				tag.ComponentFX,
 				tag.NewStringTag("callee", e.FunctionName),
 				tag.NewStringTag("caller", e.CallerName),
@@ -1077,7 +1078,7 @@ func (l *fxLogAdapter) LogEvent(e fxevent.Event) {
 		}
 	case *fxevent.Supplied:
 		if e.Err != nil {
-			l.logger.Error("supplied",
+			log.ErrorWithCode(l.logger, errorcode.InfraServiceLifecycleHookFailed, "supplied", nil,
 				tag.ComponentFX,
 				tag.NewStringTag("type", e.TypeName),
 				tag.NewStringTag("module", e.ModuleName),
@@ -1085,28 +1086,28 @@ func (l *fxLogAdapter) LogEvent(e fxevent.Event) {
 		}
 	case *fxevent.Provided:
 		if e.Err != nil {
-			l.logger.Error("error encountered while applying options",
+			log.ErrorWithCode(l.logger, errorcode.InfraServiceLifecycleHookFailed, "error encountered while applying options", nil,
 				tag.ComponentFX,
 				tag.NewStringTag("module", e.ModuleName),
 				tag.Error(e.Err))
 		}
 	case *fxevent.Replaced:
 		if e.Err != nil {
-			l.logger.Error("error encountered while replacing",
+			log.ErrorWithCode(l.logger, errorcode.InfraServiceLifecycleHookFailed, "error encountered while replacing", nil,
 				tag.ComponentFX,
 				tag.NewStringTag("module", e.ModuleName),
 				tag.Error(e.Err))
 		}
 	case *fxevent.Decorated:
 		if e.Err != nil {
-			l.logger.Error("error encountered while applying options",
+			log.ErrorWithCode(l.logger, errorcode.InfraServiceLifecycleHookFailed, "error encountered while applying options", nil,
 				tag.ComponentFX,
 				tag.NewStringTag("module", e.ModuleName),
 				tag.Error(e.Err))
 		}
 	case *fxevent.Run:
 		if e.Err != nil {
-			l.logger.Error("error returned",
+			log.ErrorWithCode(l.logger, errorcode.InfraServiceLifecycleHookFailed, "error returned", nil,
 				tag.ComponentFX,
 				tag.NewStringTag("name", e.Name),
 				tag.NewStringTag("kind", e.Kind),
@@ -1123,7 +1124,7 @@ func (l *fxLogAdapter) LogEvent(e fxevent.Event) {
 		)
 	case *fxevent.Invoked:
 		if e.Err != nil {
-			l.logger.Error("invoke failed",
+			log.ErrorWithCode(l.logger, errorcode.InfraServiceLifecycleHookFailed, "invoke failed", nil,
 				tag.ComponentFX,
 				tag.Error(e.Err),
 				tag.NewStringTag("stack", e.Trace),
@@ -1137,23 +1138,23 @@ func (l *fxLogAdapter) LogEvent(e fxevent.Event) {
 			tag.NewStringerTag("signal", e.Signal))
 	case *fxevent.Stopped:
 		if e.Err != nil {
-			l.logger.Error("stop failed", tag.ComponentFX, tag.Error(e.Err))
+			log.ErrorWithCode(l.logger, errorcode.InfraServiceLifecycleHookFailed, "stop failed", e.Err, tag.ComponentFX)
 		}
 	case *fxevent.RollingBack:
-		l.logger.Error("start failed, rolling back", tag.ComponentFX, tag.Error(e.StartErr))
+		log.ErrorWithCode(l.logger, errorcode.InfraServiceStartupFailed, "start failed, rolling back", e.StartErr, tag.ComponentFX)
 	case *fxevent.RolledBack:
 		if e.Err != nil {
-			l.logger.Error("rollback failed", tag.ComponentFX, tag.Error(e.Err))
+			log.ErrorWithCode(l.logger, errorcode.InfraServiceLifecycleHookFailed, "rollback failed", e.Err, tag.ComponentFX)
 		}
 	case *fxevent.Started:
 		if e.Err != nil {
-			l.logger.Error("start failed", tag.ComponentFX, tag.Error(e.Err))
+			log.ErrorWithCode(l.logger, errorcode.InfraServiceStartupFailed, "start failed", e.Err, tag.ComponentFX)
 		} else {
 			l.logger.Debug("started", tag.ComponentFX)
 		}
 	case *fxevent.LoggerInitialized:
 		if e.Err != nil {
-			l.logger.Error("custom logger initialization failed", tag.ComponentFX, tag.Error(e.Err))
+			log.ErrorWithCode(l.logger, errorcode.InfraServiceStartupFailed, "custom logger initialization failed", e.Err, tag.ComponentFX)
 		} else {
 			l.logger.Debug("initialized custom fxevent.Logger",
 				tag.ComponentFX,

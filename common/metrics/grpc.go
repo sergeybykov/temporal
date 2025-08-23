@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	metricsspb "go.temporal.io/server/api/metrics/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -63,7 +63,7 @@ func NewClientMetricsTrailerPropagatorInterceptor(logger log.Logger) grpc.UnaryC
 			metricsBaggage := &metricsspb.Baggage{}
 			unmarshalErr := metricsBaggage.Unmarshal(baggageBytes)
 			if unmarshalErr != nil {
-				logger.Error("unable to unmarshal metrics baggage from trailer", tag.Error(unmarshalErr))
+				log.ErrorWithCode(logger, errorcode.InfraMetricsProviderOperationFailed, "unable to unmarshal metrics baggage from trailer", unmarshalErr)
 				continue
 			}
 			for counterName, counterValue := range metricsBaggage.CountersInt {
@@ -108,14 +108,14 @@ func NewServerMetricsTrailerPropagatorInterceptor(logger log.Logger) grpc.UnaryS
 
 		bytes, marshalErr := metricsBaggage.Marshal()
 		if marshalErr != nil {
-			logger.Error("unable to marshal metric baggage", tag.Error(marshalErr))
+			log.ErrorWithCode(logger, errorcode.InfraMetricsProviderOperationFailed, "unable to marshal metric baggage", marshalErr)
 		}
 
 		md := metadata.Pairs(metricsTrailerKey, string(bytes))
 
 		marshalErr = grpc.SetTrailer(ctx, md)
 		if marshalErr != nil {
-			logger.Error("unable to add metrics baggage to gRPC trailer", tag.Error(marshalErr))
+			log.ErrorWithCode(logger, errorcode.InfraMetricsProviderOperationFailed, "unable to add metrics baggage to gRPC trailer", marshalErr)
 		}
 
 		return resp, err

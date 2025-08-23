@@ -13,8 +13,8 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	_sourcePersistence "go.temporal.io/server/common/persistence"
 	"go.temporal.io/server/common/telemetry"
 )
@@ -65,14 +65,14 @@ func (d telemetryTaskStore) CompleteTasksLessThan(ctx context.Context, request *
 
 		requestPayload, err := json.MarshalIndent(request, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.CompleteTasksLessThanRequest for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.CompleteTasksLessThanRequest for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.request.payload").String(string(requestPayload)))
 		}
 
 		responsePayload, err := json.MarshalIndent(i1, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize int for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize int for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.response.payload").String(string(responsePayload)))
 		}
@@ -107,14 +107,14 @@ func (d telemetryTaskStore) CountTaskQueuesByBuildId(ctx context.Context, reques
 
 		requestPayload, err := json.MarshalIndent(request, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.CountTaskQueuesByBuildIdRequest for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.CountTaskQueuesByBuildIdRequest for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.request.payload").String(string(requestPayload)))
 		}
 
 		responsePayload, err := json.MarshalIndent(i1, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize int for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize int for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.response.payload").String(string(responsePayload)))
 		}
@@ -149,7 +149,7 @@ func (d telemetryTaskStore) CreateTaskQueue(ctx context.Context, request *_sourc
 
 		requestPayload, err := json.MarshalIndent(request, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.InternalCreateTaskQueueRequest for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.InternalCreateTaskQueueRequest for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.request.payload").String(string(requestPayload)))
 		}
@@ -184,14 +184,14 @@ func (d telemetryTaskStore) CreateTasks(ctx context.Context, request *_sourcePer
 
 		requestPayload, err := json.MarshalIndent(request, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.InternalCreateTasksRequest for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.InternalCreateTasksRequest for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.request.payload").String(string(requestPayload)))
 		}
 
 		responsePayload, err := json.MarshalIndent(cp1, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.CreateTasksResponse for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.CreateTasksResponse for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.response.payload").String(string(responsePayload)))
 		}
@@ -226,7 +226,7 @@ func (d telemetryTaskStore) DeleteTaskQueue(ctx context.Context, request *_sourc
 
 		requestPayload, err := json.MarshalIndent(request, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.DeleteTaskQueueRequest for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.DeleteTaskQueueRequest for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.request.payload").String(string(requestPayload)))
 		}
@@ -261,14 +261,14 @@ func (d telemetryTaskStore) GetTaskQueue(ctx context.Context, request *_sourcePe
 
 		requestPayload, err := json.MarshalIndent(request, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.InternalGetTaskQueueRequest for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.InternalGetTaskQueueRequest for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.request.payload").String(string(requestPayload)))
 		}
 
 		responsePayload, err := json.MarshalIndent(ip1, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.InternalGetTaskQueueResponse for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.InternalGetTaskQueueResponse for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.response.payload").String(string(responsePayload)))
 		}
@@ -303,14 +303,14 @@ func (d telemetryTaskStore) GetTaskQueueUserData(ctx context.Context, request *_
 
 		requestPayload, err := json.MarshalIndent(request, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.GetTaskQueueUserDataRequest for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.GetTaskQueueUserDataRequest for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.request.payload").String(string(requestPayload)))
 		}
 
 		responsePayload, err := json.MarshalIndent(ip1, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.InternalGetTaskQueueUserDataResponse for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.InternalGetTaskQueueUserDataResponse for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.response.payload").String(string(responsePayload)))
 		}
@@ -345,14 +345,14 @@ func (d telemetryTaskStore) GetTaskQueuesByBuildId(ctx context.Context, request 
 
 		requestPayload, err := json.MarshalIndent(request, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.GetTaskQueuesByBuildIdRequest for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.GetTaskQueuesByBuildIdRequest for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.request.payload").String(string(requestPayload)))
 		}
 
 		responsePayload, err := json.MarshalIndent(sa1, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize []string for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize []string for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.response.payload").String(string(responsePayload)))
 		}
@@ -387,14 +387,14 @@ func (d telemetryTaskStore) GetTasks(ctx context.Context, request *_sourcePersis
 
 		requestPayload, err := json.MarshalIndent(request, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.GetTasksRequest for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.GetTasksRequest for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.request.payload").String(string(requestPayload)))
 		}
 
 		responsePayload, err := json.MarshalIndent(ip1, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.InternalGetTasksResponse for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.InternalGetTasksResponse for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.response.payload").String(string(responsePayload)))
 		}
@@ -429,14 +429,14 @@ func (d telemetryTaskStore) ListTaskQueue(ctx context.Context, request *_sourceP
 
 		requestPayload, err := json.MarshalIndent(request, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.ListTaskQueueRequest for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.ListTaskQueueRequest for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.request.payload").String(string(requestPayload)))
 		}
 
 		responsePayload, err := json.MarshalIndent(ip1, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.InternalListTaskQueueResponse for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.InternalListTaskQueueResponse for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.response.payload").String(string(responsePayload)))
 		}
@@ -471,14 +471,14 @@ func (d telemetryTaskStore) ListTaskQueueUserDataEntries(ctx context.Context, re
 
 		requestPayload, err := json.MarshalIndent(request, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.ListTaskQueueUserDataEntriesRequest for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.ListTaskQueueUserDataEntriesRequest for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.request.payload").String(string(requestPayload)))
 		}
 
 		responsePayload, err := json.MarshalIndent(ip1, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.InternalListTaskQueueUserDataEntriesResponse for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.InternalListTaskQueueUserDataEntriesResponse for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.response.payload").String(string(responsePayload)))
 		}
@@ -513,14 +513,14 @@ func (d telemetryTaskStore) UpdateTaskQueue(ctx context.Context, request *_sourc
 
 		requestPayload, err := json.MarshalIndent(request, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.InternalUpdateTaskQueueRequest for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.InternalUpdateTaskQueueRequest for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.request.payload").String(string(requestPayload)))
 		}
 
 		responsePayload, err := json.MarshalIndent(up1, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.UpdateTaskQueueResponse for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.UpdateTaskQueueResponse for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.response.payload").String(string(responsePayload)))
 		}
@@ -555,7 +555,7 @@ func (d telemetryTaskStore) UpdateTaskQueueUserData(ctx context.Context, request
 
 		requestPayload, err := json.MarshalIndent(request, "", "    ")
 		if err != nil {
-			d.logger.Error("failed to serialize *_sourcePersistence.InternalUpdateTaskQueueUserDataRequest for OTEL span", tag.Error(err))
+			log.ErrorWithCode(d.logger, errorcode.CommonPersistenceTelemetryOTELSerializationFailed, "failed to serialize *_sourcePersistence.InternalUpdateTaskQueueUserDataRequest for OTEL span", err)
 		} else {
 			span.SetAttributes(attribute.Key("persistence.request.payload").String(string(requestPayload)))
 		}

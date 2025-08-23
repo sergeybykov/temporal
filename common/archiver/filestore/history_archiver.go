@@ -27,6 +27,7 @@ import (
 	"go.temporal.io/server/common/archiver"
 	"go.temporal.io/server/common/codec"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -118,12 +119,12 @@ func (h *historyArchiver) Archive(
 	logger := archiver.TagLoggerWithArchiveHistoryRequestAndURI(h.logger, request, URI.String())
 
 	if err := h.ValidateURI(URI); err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
+		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err), tag.ErrorCode(errorcode.CommonHistoryArchivalOperationFailed))
 		return err
 	}
 
 	if err := archiver.ValidateHistoryArchiveRequest(request); err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err))
+		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err), tag.ErrorCode(errorcode.CommonHistoryArchivalOperationFailed))
 		return err
 	}
 
@@ -146,15 +147,15 @@ func (h *historyArchiver) Archive(
 
 			logger = log.With(logger, tag.ArchivalArchiveFailReason(archiver.ErrReasonReadHistory), tag.Error(err))
 			if !common.IsPersistenceTransientError(err) {
-				logger.Error(archiver.ArchiveNonRetryableErrorMsg)
+				logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ErrorCode(errorcode.CommonHistoryArchivalOperationFailed))
 			} else {
-				logger.Error(archiver.ArchiveTransientErrorMsg)
+				logger.Error(archiver.ArchiveTransientErrorMsg, tag.ErrorCode(errorcode.CommonHistoryArchivalOperationFailed))
 			}
 			return err
 		}
 
 		if historyMutated(request, historyBlob.Body, historyBlob.Header.IsLast) {
-			logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonHistoryMutated))
+			logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonHistoryMutated), tag.ErrorCode(errorcode.CommonHistoryArchivalOperationFailed))
 			return archiver.ErrHistoryMutated
 		}
 
@@ -164,19 +165,19 @@ func (h *historyArchiver) Archive(
 	encoder := codec.NewJSONPBEncoder()
 	encodedHistoryBatches, err := encoder.EncodeHistories(historyBatches)
 	if err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errEncodeHistory), tag.Error(err))
+		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errEncodeHistory), tag.Error(err), tag.ErrorCode(errorcode.CommonHistoryArchivalOperationFailed))
 		return err
 	}
 
 	dirPath := URI.Path()
 	if err = mkdirAll(dirPath, h.dirMode); err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errMakeDirectory), tag.Error(err))
+		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errMakeDirectory), tag.Error(err), tag.ErrorCode(errorcode.CommonArchivalUploadFailed))
 		return err
 	}
 
 	filename := constructHistoryFilename(request.NamespaceID, request.WorkflowID, request.RunID, request.CloseFailoverVersion)
 	if err := writeFile(path.Join(dirPath, filename), encodedHistoryBatches, h.fileMode); err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
+		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err), tag.ErrorCode(errorcode.CommonArchivalUploadFailed))
 		return err
 	}
 

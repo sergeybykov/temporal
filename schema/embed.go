@@ -5,8 +5,8 @@ import (
 	"io/fs"
 	"path/filepath"
 
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 )
 
 //go:embed *
@@ -35,7 +35,7 @@ func PathsByDir(dbSubDir string) []string {
 		return nil
 	})
 	if err != nil {
-		logger.Error("error walking embedded schema file system tree, could not generate valid paths", tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.SchemaEmbedOperationFailed, "error walking embedded schema file system tree, could not generate valid paths", err)
 	}
 	return dirs
 }

@@ -6,6 +6,7 @@ import (
 
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -200,7 +201,7 @@ func (m *visibilityManagerMetrics) updateErrorMetric(handler metrics.Handler, er
 		metrics.VisibilityPersistenceResourceExhausted.With(handler).Record(
 			1, metrics.ResourceExhaustedCauseTag(err.Cause), metrics.ResourceExhaustedScopeTag(err.Scope))
 	default:
-		m.logger.Error("Operation failed with an error.", tag.Error(err))
+		log.ErrorWithCode(m.logger, errorcode.CommonVisibilityManagerMetricsOperationFailed, "Operation failed with an error.", err)
 		metrics.VisibilityPersistenceFailures.With(handler).Record(1)
 	}
 

@@ -14,6 +14,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/server/common/clock"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -102,7 +103,7 @@ func (h *DatabaseHandle) reconnect(force bool) *sqlx.DB {
 	h.lastRefresh = now
 	newConn, err := h.connect()
 	if err != nil {
-		h.logger.Error("sql handle: unable to refresh database connection pool", tag.Error(err))
+		log.ErrorWithCode(h.logger, errorcode.InfraDBConnectionFailed, "sql handle: unable to refresh database connection pool", err)
 		handler := h.metrics.WithTags(metrics.FailureTag("error"))
 		metrics.PersistenceSessionRefreshFailures.With(handler).Record(1)
 		return nil

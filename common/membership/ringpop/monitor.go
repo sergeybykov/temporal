@@ -21,6 +21,7 @@ import (
 	"go.temporal.io/server/common/convert"
 	"go.temporal.io/server/common/future"
 	"go.temporal.io/server/common/headers"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/membership"
@@ -372,7 +373,7 @@ func (rpo *monitor) startHeartbeatUpsertLoop(request *persistence.UpsertClusterM
 			err := rpo.upsertMyMembership(rpo.lifecycleCtx, request)
 
 			if err != nil {
-				rpo.logger.Error("Membership upsert failed.", tag.Error(err))
+				log.ErrorWithCode(rpo.logger, errorcode.MemberRingpopMonitorOperationFailed, "Membership upsert failed.", err)
 			}
 
 			jitter := math.Round(rand.Float64() * 5)
@@ -415,12 +416,12 @@ func (rpo *monitor) EvictSelfAt(asOf time.Time) (time.Duration, error) {
 	// set label for eviction time in the future
 	labels, err := rpo.rp.Labels()
 	if err != nil {
-		rpo.logger.Error("unable to set ringpop label", tag.Error(err), tag.Key(stopAtKey))
+		log.ErrorWithCode(rpo.logger, errorcode.MemberRingpopMonitorOperationFailed, "unable to set ringpop label", err, tag.Key(stopAtKey))
 		return 0, err
 	}
 	err = labels.Set(stopAtKey, strconv.FormatInt(asOf.Unix(), 10))
 	if err != nil {
-		rpo.logger.Error("unable to set ringpop label", tag.Error(err), tag.Key(stopAtKey))
+		log.ErrorWithCode(rpo.logger, errorcode.MemberRingpopMonitorOperationFailed, "unable to set ringpop label", err, tag.Key(stopAtKey))
 		return 0, err
 	}
 	// Wait a couple more seconds after the stopAt time before actually leaving.

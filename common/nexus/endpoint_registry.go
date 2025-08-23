@@ -13,11 +13,11 @@ import (
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/cache"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/future"
 	"go.temporal.io/server/common/goro"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/namespace"
 	p "go.temporal.io/server/common/persistence"
@@ -291,7 +291,7 @@ func (r *EndpointRegistryImpl) refreshEndpoints(ctx context.Context) error {
 	})
 	if err != nil {
 		if ctx.Err() == nil {
-			r.logger.Error("long poll to refresh Nexus endpoints returned error", tag.Error(err))
+			log.ErrorWithCode(r.logger, errorcode.CommonNexusOperationFailed, "long poll to refresh Nexus endpoints returned error", err)
 		}
 		return err
 	}
@@ -319,7 +319,7 @@ func (r *EndpointRegistryImpl) refreshEndpoints(ctx context.Context) error {
 				// Indicates table was updated during paging, so reset and start from the beginning.
 				currentTableVersion, entries, err = r.getAllEndpointsMatching(ctx)
 				if err != nil {
-					r.logger.Error("error during background refresh of Nexus endpoints", tag.Error(err))
+					log.ErrorWithCode(r.logger, errorcode.CommonNexusOperationFailed, "error during background refresh of Nexus endpoints", err)
 					return err
 				}
 				break
@@ -356,7 +356,7 @@ func (r *EndpointRegistryImpl) getAllEndpointsMatchingWithPersistenceFallback(ct
 	tableVersion, endpoints, err := r.getAllEndpointsMatching(ctx)
 	if err != nil {
 		// Fallback to persistence on matching error during initial load.
-		r.logger.Error("error from matching when initializing Nexus endpoint cache", tag.Error(err))
+		log.ErrorWithCode(r.logger, errorcode.CommonNexusOperationFailed, "error from matching when initializing Nexus endpoint cache", err)
 		tableVersion, endpoints, err = r.getAllEndpointsPersistence(ctx)
 	}
 	return tableVersion, endpoints, err

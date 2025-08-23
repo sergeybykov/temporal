@@ -9,6 +9,7 @@ import (
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 )
@@ -179,7 +180,7 @@ func (s *SequentialScheduler[T]) updateWorkerCount(targetWorkerNum int) {
 	}
 
 	if targetWorkerNum < 0 {
-		s.logger.Error("Target worker pool size is negative. Please fix the dynamic config.", tag.Key("worker-pool-size"), tag.Value(targetWorkerNum))
+		log.ErrorWithCode(s.logger, errorcode.CommonTaskSchedulerOperationFailed, "Target worker pool size is negative. Please fix the dynamic config.", nil, tag.Key("worker-pool-size"), tag.Value(targetWorkerNum))
 		return
 	}
 

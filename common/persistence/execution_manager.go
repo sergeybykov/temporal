@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/definition"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/persistence/serialization"
@@ -961,7 +962,7 @@ func (m *executionManagerImpl) trimHistoryNode(
 		RunID:       runID,
 	})
 	if err != nil {
-		m.logger.Error("ExecutionManager unable to get mutable state for trimming history branch",
+		log.ErrorWithCode(m.logger, errorcode.InfraMutableStateRetrievalFailed, "ExecutionManager unable to get mutable state for trimming history branch", err,
 			tag.WorkflowNamespaceID(namespaceID),
 			tag.WorkflowID(workflowID),
 			tag.WorkflowRunID(runID),
@@ -984,7 +985,7 @@ func (m *executionManagerImpl) trimHistoryNode(
 		TransactionID: mutableStateLastNodeTransactionID,
 	}); err != nil {
 		// best effort trim
-		m.logger.Error("ExecutionManager unable to trim history branch",
+		log.ErrorWithCode(m.logger, errorcode.InfraHistoryBranchTrimFailed, "ExecutionManager unable to trim history branch", err,
 			tag.WorkflowNamespaceID(namespaceID),
 			tag.WorkflowID(workflowID),
 			tag.WorkflowRunID(runID),

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -70,7 +71,7 @@ func (e generatorTaskExecutor) executeBufferTask(env hsm.Environment, node *hsm.
 	res, err := e.SpecProcessor.ProcessTimeRange(scheduler, t1, t2, scheduler.overlapPolicy(), "", false, nil)
 	if err != nil {
 		// An error here should be impossible, send to the DLQ.
-		logger.Error("Error processing time range", tag.Error(err))
+		log.ErrorWithCode(logger, headers.ComponentSchedulerExecutorFailed, "Error processing time range", err)
 
 		return fmt.Errorf(
 			"%w: %w",

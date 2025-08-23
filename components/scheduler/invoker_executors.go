@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/server/api/historyservice/v1"
 	schedulespb "go.temporal.io/server/api/schedule/v1"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -174,7 +175,7 @@ func (e invokerTaskExecutor) cancelWorkflows(
 
 		err := e.cancelWorkflow(ctx, scheduler, wf)
 		if err != nil {
-			logger.Error("Failed to cancel workflow", tag.Error(err), tag.WorkflowID(wf.WorkflowId))
+			log.ErrorWithCode(logger, headers.ComponentSchedulerExecutorFailed, "Failed to cancel workflow", err, tag.WorkflowID(wf.WorkflowId))
 			e.MetricsHandler.Counter(metrics.ScheduleCancelWorkflowErrors.Name()).Record(1)
 		}
 
@@ -198,7 +199,7 @@ func (e invokerTaskExecutor) terminateWorkflows(
 
 		err := e.terminateWorkflow(ctx, scheduler, wf)
 		if err != nil {
-			logger.Error("Failed to terminate workflow", tag.Error(err), tag.WorkflowID(wf.WorkflowId))
+			log.ErrorWithCode(logger, headers.ComponentSchedulerExecutorFailed, "Failed to terminate workflow", err, tag.WorkflowID(wf.WorkflowId))
 			e.MetricsHandler.Counter(metrics.ScheduleTerminateWorkflowErrors.Name()).Record(1)
 		}
 
@@ -229,7 +230,7 @@ func (e invokerTaskExecutor) startWorkflows(
 
 		startResult, err := e.startWorkflow(ctx, env, scheduler, start)
 		if err != nil {
-			logger.Error("Failed to start workflow", tag.Error(err))
+			log.ErrorWithCode(logger, headers.ComponentSchedulerExecutorFailed, "Failed to start workflow", err)
 
 			// Don't count "already started" for the error metric or retry, as it is most likely
 			// due to misconfiguration.

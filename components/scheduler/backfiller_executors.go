@@ -30,6 +30,7 @@ import (
 
 	schedulespb "go.temporal.io/server/api/schedule/v1"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -99,7 +100,7 @@ func (e backfillerTaskExecutor) executeBackfillTask(env hsm.Environment, node *h
 		result, err = e.processTrigger(env, scheduler, backfiller)
 	}
 	if err != nil {
-		logger.Error("Failed to process backfill", tag.Error(err))
+		log.ErrorWithCode(logger, headers.ComponentSchedulerExecutorFailed, "Failed to process backfill", err)
 		return err
 	}
 
@@ -107,7 +108,7 @@ func (e backfillerTaskExecutor) executeBackfillTask(env hsm.Environment, node *h
 	if len(result.BufferedStarts) > 0 {
 		err = scheduler.EnqueueBufferedStarts(schedulerNode, result.BufferedStarts)
 		if err != nil {
-			logger.Error("Failed to enqueue BufferedStarts", tag.Error(err))
+			log.ErrorWithCode(logger, headers.ComponentSchedulerExecutorFailed, "Failed to enqueue BufferedStarts", err)
 			return err
 		}
 	}

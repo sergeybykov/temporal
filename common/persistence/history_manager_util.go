@@ -9,6 +9,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	historyspb "go.temporal.io/server/api/history/v1"
 	persistencespb "go.temporal.io/server/api/persistence/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 )
@@ -160,13 +161,13 @@ func ValidateBatch(
 
 	if firstEvent.GetVersion() != lastEvent.GetVersion() || firstEvent.GetEventId()+int64(eventCount-1) != lastEvent.GetEventId() {
 		// in a single batch, version should be the same, and ID should be contiguous
-		logger.Error(dataLossMsg, dataLossTags(errWrongVersion)...)
+		log.ErrorWithCode(logger, errorcode.PersistHistoryManagerOperationFailed, dataLossMsg, serviceerror.NewDataLoss(errWrongVersion), dataLossTags(errWrongVersion)...)
 		return serviceerror.NewDataLoss(errWrongVersion)
 	}
 	// If it is the first batch in the response, we cannot check the first event id here. That information is in the historyPagingToken.
 	// TODO: PPV refactor to move this check to ExecutionManager so that we can include that check as well.
 	if lastEventID != 0 && firstEvent.GetEventId() != lastEventID+1 {
-		logger.Error(dataLossMsg, dataLossTags(errNonContiguousEventID)...)
+		log.ErrorWithCode(logger, errorcode.PersistHistoryManagerOperationFailed, dataLossMsg, serviceerror.NewDataLoss(errNonContiguousEventID), dataLossTags(errNonContiguousEventID)...)
 		return serviceerror.NewDataLoss(errNonContiguousEventID)
 	}
 	return nil
