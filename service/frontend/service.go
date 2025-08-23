@@ -12,8 +12,8 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/server/api/adminservice/v1"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/membership"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/persistence/visibility/manager"
@@ -426,14 +426,14 @@ func (s *Service) Start() {
 	go func() {
 		s.logger.Info("Starting to serve on frontend listener")
 		if err := s.server.Serve(s.grpcListener); err != nil {
-			s.logger.Fatal("Failed to serve on frontend listener", tag.Error(err))
+			log.FatalWithCode(s.logger, errorcode.FrontendFrontendServiceFailed, "Failed to serve on frontend listener", err)
 		}
 	}()
 
 	if s.httpAPIServer != nil {
 		go func() {
 			if err := s.httpAPIServer.Serve(); err != nil {
-				s.logger.Fatal("Failed to serve HTTP API server", tag.Error(err))
+				log.FatalWithCode(s.logger, errorcode.FrontendFrontendServiceFailed2, "Failed to serve HTTP API server", err)
 			}
 		}()
 	} else if s.config.EnableNexusAPIs() {
@@ -444,7 +444,7 @@ func (s *Service) Start() {
 			action = "To enable Nexus, follow these instructions: https://github.com/temporalio/temporal/blob/main/docs/architecture/nexus.md#enabling-nexus."
 		}
 
-		s.logger.Warn(fmt.Sprintf("system.enableNexus dynamic config is enabled but the HTTP API port has not been set. Starting with Nexus disabled. %s", action))
+		log.WarnWithCode(s.logger, errorcode.FrontendNexusEndpointClientGenericError, fmt.Sprintf("system.enableNexus dynamic config is enabled but the HTTP API port has not been set. Starting with Nexus disabled. %s", action))
 	}
 
 	go s.membershipMonitor.Start()

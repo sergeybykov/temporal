@@ -43,6 +43,7 @@ import (
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/dynamicconfig"
 	"go.temporal.io/server/common/enums"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/failure"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
@@ -856,10 +857,10 @@ func (wh *WorkflowHandler) PollWorkflowTaskQueue(ctx context.Context, request *w
 	}
 
 	if request.TaskQueue.GetKind() == enumspb.TASK_QUEUE_KIND_UNSPECIFIED {
-		wh.logger.Warn("Unspecified task queue kind",
+		log.WarnWithCode(wh.logger, errorcode.FrontendTaskQueueKindUnspecified,
+			"Unspecified task queue kind",
 			tag.WorkflowTaskQueueName(request.TaskQueue.GetName()),
-			tag.WorkflowNamespace(namespace.Name(request.GetNamespace()).String()),
-		)
+			tag.WorkflowNamespace(namespace.Name(request.GetNamespace()).String()))
 	}
 
 	if err := tqid.NormalizeAndValidate(request.TaskQueue, "", wh.config.MaxIDLengthLimit()); err != nil {
@@ -903,9 +904,9 @@ func (wh *WorkflowHandler) PollWorkflowTaskQueue(ctx context.Context, request *w
 			})
 
 			if err != nil {
-				wh.logger.Error("Failed to record worker heartbeat.",
-					tag.WorkflowTaskQueueName(request.TaskQueue.GetName()),
-					tag.Error(err))
+				log.ErrorWithCode(wh.logger, errorcode.FrontendWorkerHeartbeatFailed,
+					"Failed to record worker heartbeat", err,
+					tag.WorkflowTaskQueueName(request.TaskQueue.GetName()))
 			}
 		}()
 	}
@@ -936,10 +937,10 @@ func (wh *WorkflowHandler) PollWorkflowTaskQueue(ctx context.Context, request *w
 		if ok {
 			ctxTimeout = ctxDeadline.Sub(callTime).String()
 		}
-		wh.logger.Error("Unable to call matching.PollWorkflowTaskQueue.",
+		log.ErrorWithCode(wh.logger, errorcode.FrontendMatchingServiceCallFailed,
+			"Unable to call matching.PollWorkflowTaskQueue", err,
 			tag.WorkflowTaskQueueName(request.GetTaskQueue().GetName()),
-			tag.Timeout(ctxTimeout),
-			tag.Error(err))
+			tag.Timeout(ctxTimeout))
 		return nil, err
 	}
 
@@ -1165,10 +1166,10 @@ func (wh *WorkflowHandler) PollActivityTaskQueue(ctx context.Context, request *w
 		if ok {
 			ctxTimeout = ctxDeadline.Sub(callTime).String()
 		}
-		wh.logger.Error("Unable to call matching.PollActivityTaskQueue.",
+		log.ErrorWithCode(wh.logger, errorcode.FrontendMatchingServiceCallFailed,
+			"Unable to call matching.PollActivityTaskQueue", err,
 			tag.WorkflowTaskQueueName(request.GetTaskQueue().GetName()),
-			tag.Timeout(ctxTimeout),
-			tag.Error(err))
+			tag.Timeout(ctxTimeout))
 
 		return nil, err
 	}
@@ -2741,9 +2742,9 @@ func (wh *WorkflowHandler) ShutdownWorker(ctx context.Context, request *workflow
 			},
 		})
 		if err != nil {
-			wh.logger.Error("Failed to record worker heartbeat during shutdown.",
-				tag.WorkflowTaskQueueName(request.WorkerHeartbeat.GetTaskQueue()),
-				tag.Error(err))
+			log.ErrorWithCode(wh.logger, errorcode.FrontendWorkerHeartbeatFailed,
+				"Failed to record worker heartbeat during shutdown", err,
+				tag.WorkflowTaskQueueName(request.WorkerHeartbeat.GetTaskQueue()))
 		}
 	}
 
@@ -4453,7 +4454,8 @@ func (wh *WorkflowHandler) GetWorkerTaskReachability(ctx context.Context, reques
 			return nil, err
 		}
 		// Intentionally treat all errors as internal errors
-		wh.logger.Error("Failed getting worker task reachability", tag.Error(err))
+		log.ErrorWithCode(wh.logger, errorcode.FrontendWorkerReachabilityFailed,
+			"Failed getting worker task reachability", err)
 		return nil, serviceerror.NewInternal("Internal error")
 	}
 	return response, nil
@@ -4748,7 +4750,7 @@ func (wh *WorkflowHandler) DescribeBatchOperation(
 		operationType = enumspb.BATCH_OPERATION_TYPE_UNPAUSE_ACTIVITY
 	default:
 		operationType = enumspb.BATCH_OPERATION_TYPE_UNSPECIFIED
-		wh.throttledLogger.Warn("Unknown batch operation type", tag.NewStringTag("batch-operation-type", operationTypeString))
+		log.WarnWithCode(wh.throttledLogger, errorcode.FrontendFrontendWorkflowhandlerOperationFailed, "Unknown batch operation type", tag.NewStringTag("batch-operation-type", operationTypeString))
 	}
 
 	batchOperationResp := &workflowservice.DescribeBatchOperationResponse{
@@ -4891,9 +4893,9 @@ func (wh *WorkflowHandler) PollNexusTaskQueue(ctx context.Context, request *work
 				},
 			})
 			if err != nil {
-				wh.logger.Error("Failed to record worker heartbeat from nexus poll request.",
-					tag.NexusTaskQueueName(request.GetTaskQueue().GetName()),
-					tag.Error(err))
+				log.ErrorWithCode(wh.logger, errorcode.FrontendWorkerHeartbeatFailed,
+					"Failed to record worker heartbeat from nexus poll request", err,
+					tag.NexusTaskQueueName(request.GetTaskQueue().GetName()))
 			}
 		}()
 	}
@@ -4935,10 +4937,10 @@ func (wh *WorkflowHandler) PollNexusTaskQueue(ctx context.Context, request *work
 		if ok {
 			ctxTimeout = ctxDeadline.Sub(callTime).String()
 		}
-		wh.logger.Error("Unable to call matching.PollNexusTaskQueue.",
+		log.ErrorWithCode(wh.logger, errorcode.FrontendNexusTaskQueuePollFailed,
+			"Unable to call matching.PollNexusTaskQueue", err,
 			tag.WorkflowTaskQueueName(request.GetTaskQueue().GetName()),
-			tag.Timeout(ctxTimeout),
-			tag.Error(err))
+			tag.Timeout(ctxTimeout))
 
 		return nil, err
 	}
@@ -5430,7 +5432,7 @@ func (wh *WorkflowHandler) cancelOutstandingPoll(
 	)
 	// We can not do much if this call fails.  Just log the error and move on.
 	if err != nil {
-		wh.logger.Warn("Failed to cancel outstanding poller.",
+		log.WarnWithCode(wh.logger, errorcode.FrontendFrontendWorkflowhandlerError, "Failed to cancel outstanding poller.",
 			tag.WorkflowTaskQueueName(taskQueue.GetName()), tag.Error(err))
 	}
 
@@ -5599,10 +5601,12 @@ func (wh *WorkflowHandler) decodeScheduleListInfo(memo *commonpb.Memo) *schedule
 	if p := memo.GetFields()[scheduler.MemoFieldInfo]; p == nil {
 		return nil
 	} else if err := payload.Decode(p, &listInfoBytes); err != nil {
-		wh.logger.Error("decoding schedule list info from payload", tag.Error(err))
+		log.ErrorWithCode(wh.logger, errorcode.FrontendScheduleDecodingFailed,
+			"decoding schedule list info from payload", err)
 		return nil
 	} else if err := listInfo.Unmarshal(listInfoBytes); err != nil {
-		wh.logger.Error("decoding schedule list info from payload", tag.Error(err))
+		log.ErrorWithCode(wh.logger, errorcode.FrontendScheduleDecodingFailed,
+			"decoding schedule list info from payload", err)
 		return nil
 	}
 	scheduler.CleanSpec(listInfo.Spec)
@@ -5649,12 +5653,12 @@ func (wh *WorkflowHandler) addInitialScheduleMemo(request *workflowservice.Creat
 	info := scheduler.GetListInfoFromStartArgs(args, time.Now().UTC(), wh.scheduleSpecBuilder)
 	infoBytes, err := info.Marshal()
 	if err != nil {
-		wh.logger.Error("encoding initial schedule memo failed", tag.Error(err))
+		log.ErrorWithCode(wh.logger, errorcode.FrontendScheduleMemoEncodingFailed, "encoding initial schedule memo failed", err)
 		return
 	}
 	p, err := sdk.PreferProtoDataConverter.ToPayload(infoBytes)
 	if err != nil {
-		wh.logger.Error("encoding initial schedule memo failed", tag.Error(err))
+		log.ErrorWithCode(wh.logger, errorcode.FrontendScheduleMemoEncodingFailed, "encoding initial schedule memo failed", err)
 		return
 	}
 	if request.Memo == nil {

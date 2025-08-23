@@ -15,8 +15,8 @@ import (
 	persistencespb "go.temporal.io/server/api/persistence/v1"
 	hlc "go.temporal.io/server/common/clock/hybrid_logical_clock"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
 	cnexus "go.temporal.io/server/common/nexus"
 	p "go.temporal.io/server/common/persistence"
@@ -208,7 +208,7 @@ func (c *NexusEndpointClient) List(
 		PageSize:              int(pageSize),
 	})
 	if err != nil {
-		c.logger.Error(fmt.Sprintf("error listing Nexus endpoints from persistence. NextPageToken: %v PageSize: %d", request.NextPageToken, pageSize), tag.Error(err))
+		log.ErrorWithCode(c.logger, errorcode.FrontendNexusEndpointsPersistenceListingFailed, fmt.Sprintf("error listing Nexus endpoints from persistence. NextPageToken: %v PageSize: %d", request.NextPageToken, pageSize), err)
 		return nil, serviceerror.NewInternal("error listing Nexus endpoints")
 	}
 
@@ -285,7 +285,7 @@ func (c *NexusEndpointClient) listAndFilterByName(
 			PageSize:              pageSize,
 		})
 		if err != nil {
-			c.logger.Error(fmt.Sprintf("error listing Nexus endpoints from persistence with Name filter. CurrentPageToken: %v PageSize: %d Name: %v", currentPageToken, pageSize, request.Name), tag.Error(err))
+			log.ErrorWithCode(c.logger, errorcode.FrontendNexusEndpointsPersistenceListingFailed, fmt.Sprintf("error listing Nexus endpoints from persistence with Name filter. CurrentPageToken: %v PageSize: %d Name: %v", currentPageToken, pageSize, request.Name), err)
 			return nil, serviceerror.NewInternal("error listing Nexus endpoints")
 		}
 
@@ -420,7 +420,7 @@ func (c *NexusEndpointClient) transformServiceError(err error, message string) e
 	if errors.As(err, &notFound) {
 		return err
 	}
-	c.logger.Error(message, tag.Error(err))
+	log.ErrorWithCode(c.logger, errorcode.FrontendNexusEndpointClientGenericError, message, err)
 	return serviceerror.NewInternal(message)
 }
 
