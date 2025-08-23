@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 )
@@ -109,12 +110,14 @@ func (p *LoggedHTTPClientTraceProvider) newClientTrace(logger log.Logger, hooks 
 		case "GetConn":
 			clientTrace.GetConn = func(hostPort string) {
 				logger.Info("attempting to get HTTP connection for Nexus request",
+					tag.ErrorCode(errorcode.CommonNexusOperationFailed),
 					tag.Timestamp(time.Now().UTC()),
 					tag.Address(hostPort))
 			}
 		case "GotConn":
 			clientTrace.GotConn = func(info httptrace.GotConnInfo) {
 				logger.Info("got HTTP connection for Nexus request",
+					tag.ErrorCode(errorcode.CommonNexusOperationFailed),
 					tag.Timestamp(time.Now().UTC()),
 					tag.NewBoolTag("reused", info.Reused),
 					tag.NewBoolTag("was-idle", info.WasIdle),
@@ -123,6 +126,7 @@ func (p *LoggedHTTPClientTraceProvider) newClientTrace(logger log.Logger, hooks 
 		case "ConnectStart":
 			clientTrace.ConnectStart = func(network, addr string) {
 				logger.Info("starting dial for new connection for Nexus request",
+					tag.ErrorCode(errorcode.CommonNexusOperationFailed),
 					tag.Timestamp(time.Now().UTC()),
 					tag.Address(addr),
 					tag.NewStringTag("network", network))
@@ -130,6 +134,7 @@ func (p *LoggedHTTPClientTraceProvider) newClientTrace(logger log.Logger, hooks 
 		case "ConnectDone":
 			clientTrace.ConnectDone = func(network, addr string, err error) {
 				logger.Info("finished dial for new connection for Nexus request",
+					tag.ErrorCode(errorcode.CommonNexusOperationFailed),
 					tag.Timestamp(time.Now().UTC()),
 					tag.Address(addr),
 					tag.NewStringTag("network", network),
@@ -138,6 +143,7 @@ func (p *LoggedHTTPClientTraceProvider) newClientTrace(logger log.Logger, hooks 
 		case "DNSStart":
 			clientTrace.DNSStart = func(info httptrace.DNSStartInfo) {
 				logger.Info("starting DNS lookup for Nexus request",
+					tag.ErrorCode(errorcode.CommonNexusOperationFailed),
 					tag.Timestamp(time.Now().UTC()),
 					tag.Host(info.Host))
 			}
@@ -148,6 +154,7 @@ func (p *LoggedHTTPClientTraceProvider) newClientTrace(logger log.Logger, hooks 
 					addresses[i] = a.String()
 				}
 				logger.Info("finished DNS lookup for Nexus request",
+					tag.ErrorCode(errorcode.CommonNexusOperationFailed),
 					tag.Timestamp(time.Now().UTC()),
 					tag.Addresses(addresses),
 					tag.Error(info.Err),
@@ -160,6 +167,7 @@ func (p *LoggedHTTPClientTraceProvider) newClientTrace(logger log.Logger, hooks 
 		case "TLSHandshakeDone":
 			clientTrace.TLSHandshakeDone = func(state tls.ConnectionState, err error) {
 				logger.Info("finished TLS handshake for Nexus request",
+					tag.ErrorCode(errorcode.CommonNexusOperationFailed),
 					tag.Timestamp(time.Now().UTC()),
 					tag.NewBoolTag("handshake-complete", state.HandshakeComplete),
 					tag.Error(err))
@@ -167,6 +175,7 @@ func (p *LoggedHTTPClientTraceProvider) newClientTrace(logger log.Logger, hooks 
 		case "WroteRequest":
 			clientTrace.WroteRequest = func(info httptrace.WroteRequestInfo) {
 				logger.Info("finished writing Nexus HTTP request",
+					tag.ErrorCode(errorcode.CommonNexusOperationFailed),
 					tag.Timestamp(time.Now().UTC()),
 					tag.Error(info.Err))
 			}

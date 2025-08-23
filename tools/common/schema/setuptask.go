@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/blang/semver/v4"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/persistence"
@@ -93,17 +94,17 @@ func (task *SetupTask) Run() error {
 
 		currVerParsed, err := semver.ParseTolerant(currVer)
 		if err != nil {
-			task.logger.Fatal("Unable to parse current version",
+			log.FatalWithCode(task.logger, errorcode.ToolsSchemaEmbedOperationFailed, "Unable to parse current version",
+				err,
 				tag.NewStringTag("current version", currVer),
-				tag.Error(err),
 			)
 		}
 
 		initialVersionParsed, err := semver.ParseTolerant(config.InitialVersion)
 		if err != nil {
-			task.logger.Fatal("Unable to parse initial version",
+			log.FatalWithCode(task.logger, errorcode.ToolsSchemaEmbedOperationFailed, "Unable to parse initial version",
+				err,
 				tag.NewStringTag("initial version", config.InitialVersion),
-				tag.Error(err),
 			)
 		}
 

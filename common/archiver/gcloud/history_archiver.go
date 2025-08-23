@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/server/common/archiver/gcloud/connector"
 	"go.temporal.io/server/common/codec"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -111,12 +112,12 @@ func (h *historyArchiver) Archive(ctx context.Context, URI archiver.URI, request
 	logger := archiver.TagLoggerWithArchiveHistoryRequestAndURI(h.logger, request, URI.String())
 
 	if err := h.ValidateURI(URI); err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonHistoryArchivalOperationFailed, archiver.ArchiveNonRetryableErrorMsg, err, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI))
 		return errUploadNonRetryable
 	}
 
 	if err := archiver.ValidateHistoryArchiveRequest(request); err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonHistoryArchivalOperationFailed, archiver.ArchiveNonRetryableErrorMsg, err, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest))
 		return errUploadNonRetryable
 	}
 
@@ -144,28 +145,28 @@ func (h *historyArchiver) Archive(ctx context.Context, URI archiver.URI, request
 
 			logger = log.With(logger, tag.ArchivalArchiveFailReason(archiver.ErrReasonReadHistory), tag.Error(err))
 			if !common.IsPersistenceTransientError(err) {
-				logger.Error(archiver.ArchiveNonRetryableErrorMsg)
+				log.ErrorWithCode(logger, errorcode.CommonHistoryArchivalOperationFailed, archiver.ArchiveNonRetryableErrorMsg, err)
 				return errUploadNonRetryable
 			}
-			logger.Error(archiver.ArchiveTransientErrorMsg)
+			log.ErrorWithCode(logger, errorcode.CommonHistoryArchivalOperationFailed, archiver.ArchiveTransientErrorMsg, err)
 			return err
 		}
 
 		if historyMutated(request, historyBlob.Body, historyBlob.Header.IsLast) {
-			logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonHistoryMutated))
+			log.ErrorWithCode(logger, errorcode.CommonHistoryArchivalOperationFailed, archiver.ArchiveNonRetryableErrorMsg, archiver.ErrHistoryMutated, tag.ArchivalArchiveFailReason(archiver.ErrReasonHistoryMutated))
 			return archiver.ErrHistoryMutated
 		}
 
 		encodedHistoryPart, err := encoder.EncodeHistories(historyBlob.Body)
 		if err != nil {
-			logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errEncodeHistory), tag.Error(err))
+			log.ErrorWithCode(logger, errorcode.CommonHistoryArchivalOperationFailed, archiver.ArchiveNonRetryableErrorMsg, err, tag.ArchivalArchiveFailReason(errEncodeHistory))
 			return errUploadNonRetryable
 		}
 
 		filename := constructHistoryFilenameMultipart(request.NamespaceID, request.WorkflowID, request.RunID, request.CloseFailoverVersion, part)
 		if exist, _ := h.gcloudStorage.Exist(ctx, URI, filename); !exist {
 			if err := h.gcloudStorage.Upload(ctx, URI, filename, encodedHistoryPart); err != nil {
-				logger.Error(archiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
+				log.ErrorWithCode(logger, errorcode.CommonArchivalUploadFailed, archiver.ArchiveTransientErrorMsg, err, tag.ArchivalArchiveFailReason(errWriteFile))
 				metrics.HistoryArchiverArchiveTransientErrorCount.With(handler).Record(1)
 				return err
 			}

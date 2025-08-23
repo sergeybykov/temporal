@@ -5,6 +5,7 @@ import (
 
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/membership"
@@ -123,7 +124,7 @@ func GrpcServerOptionsProvider(
 
 	grpcServerOptions, err := params.RpcFactory.GetInternodeGRPCServerOptions()
 	if err != nil {
-		params.Logger.Fatal("creating gRPC server options failed", tag.Error(err))
+		log.FatalWithCode(params.Logger, errorcode.InfraServiceStartupFailed, "creating gRPC server options failed", err)
 	}
 
 	multiStats := rpc.MultiStatsHandler{}

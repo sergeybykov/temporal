@@ -16,6 +16,7 @@ import (
 	archiverspb "go.temporal.io/server/api/archiver/v1"
 	"go.temporal.io/server/common/archiver"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -88,24 +89,24 @@ func (v *visibilityArchiver) Archive(
 	logger := archiver.TagLoggerWithArchiveVisibilityRequestAndURI(v.logger, request, URI.String())
 
 	if err := v.ValidateURI(URI); err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonVisibilityArchivalOperationFailed, archiver.ArchiveNonRetryableErrorMsg, err, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI))
 		return err
 	}
 
 	if err := archiver.ValidateVisibilityArchivalRequest(request); err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonVisibilityArchivalOperationFailed, archiver.ArchiveNonRetryableErrorMsg, err, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest))
 		return err
 	}
 
 	dirPath := path.Join(URI.Path(), request.GetNamespaceId())
 	if err = mkdirAll(dirPath, v.dirMode); err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errMakeDirectory), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonVisibilityArchivalOperationFailed, archiver.ArchiveNonRetryableErrorMsg, err, tag.ArchivalArchiveFailReason(errMakeDirectory))
 		return err
 	}
 
 	encodedVisibilityRecord, err := encode(request)
 	if err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errEncodeVisibilityRecord), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonVisibilityArchivalOperationFailed, archiver.ArchiveNonRetryableErrorMsg, err, tag.ArchivalArchiveFailReason(errEncodeVisibilityRecord))
 		return err
 	}
 
@@ -113,7 +114,7 @@ func (v *visibilityArchiver) Archive(
 	// This format allows the archiver to sort all records without reading the file contents
 	filename := constructVisibilityFilename(request.CloseTime.AsTime(), request.GetRunId())
 	if err := writeFile(path.Join(dirPath, filename), encodedVisibilityRecord, v.fileMode); err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonVisibilityArchivalOperationFailed, archiver.ArchiveNonRetryableErrorMsg, err, tag.ArchivalArchiveFailReason(errWriteFile))
 		return err
 	}
 

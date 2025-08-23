@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/convert"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -95,7 +96,7 @@ func (factory *factory) getMonitor() *monitor {
 		ctx = headers.SetCallerInfo(ctx, headers.SystemBackgroundHighCallerInfo)
 		currentClusterMetadata, err := factory.MetadataManager.GetCurrentClusterMetadata(ctx)
 		if err != nil {
-			factory.Logger.Fatal("Failed to get current cluster ID", tag.Error(err))
+			log.FatalWithCode(factory.Logger, errorcode.CommonFinalizerOperationFailed, "Failed to get current cluster ID", err)
 		}
 
 		appName := "temporal"
@@ -104,7 +105,7 @@ func (factory *factory) getMonitor() *monitor {
 		}
 		rp, err := ringpop.New(appName, ringpop.Channel(factory.getTChannel()), ringpop.AddressResolverFunc(factory.broadcastAddressResolver))
 		if err != nil {
-			factory.Logger.Fatal("Failed to get new ringpop", tag.Error(err))
+			log.FatalWithCode(factory.Logger, errorcode.CommonFinalizerOperationFailed, "Failed to get new ringpop", err)
 		}
 
 		// Empirically, ringpop updates usually propagate in under a second even in relatively large clusters.
@@ -166,16 +167,16 @@ func (factory *factory) getTChannel() *tchannel.Channel {
 func (factory *factory) getTCPChannel(ringpopHostAddress string, ringpopServiceName string) *tchannel.Channel {
 	listener, err := net.Listen("tcp", ringpopHostAddress)
 	if err != nil {
-		factory.Logger.Fatal("Failed to start ringpop listener", tag.Error(err), tag.Address(ringpopHostAddress))
+		log.FatalWithCode(factory.Logger, errorcode.CommonFinalizerOperationFailed, "Failed to start ringpop listener", err, tag.Address(ringpopHostAddress))
 	}
 
 	tChannel, err := tchannel.NewChannel(ringpopServiceName, &tchannel.ChannelOptions{})
 	if err != nil {
-		factory.Logger.Fatal("Failed to create ringpop TChannel", tag.Error(err))
+		log.FatalWithCode(factory.Logger, errorcode.CommonFinalizerOperationFailed, "Failed to create ringpop TChannel", err)
 	}
 
 	if err := tChannel.Serve(listener); err != nil {
-		factory.Logger.Fatal("Failed to serve ringpop listener", tag.Error(err), tag.Address(ringpopHostAddress))
+		log.FatalWithCode(factory.Logger, errorcode.CommonFinalizerOperationFailed, "Failed to serve ringpop listener", err, tag.Address(ringpopHostAddress))
 	}
 	return tChannel
 }
@@ -183,34 +184,34 @@ func (factory *factory) getTCPChannel(ringpopHostAddress string, ringpopServiceN
 func (factory *factory) getTLSChannel(ringpopHostAddress string, ringpopServiceName string) *tchannel.Channel {
 	clientTLSConfig, err := factory.TLSFactory.GetInternodeClientConfig()
 	if err != nil {
-		factory.Logger.Fatal("Failed to get internode TLS client config", tag.Error(err))
+		log.FatalWithCode(factory.Logger, errorcode.CommonFinalizerOperationFailed, "Failed to get internode TLS client config", err)
 	}
 
 	serverTLSConfig, err := factory.TLSFactory.GetInternodeServerConfig()
 	if err != nil {
-		factory.Logger.Fatal("Failed to get internode TLS server config", tag.Error(err))
+		log.FatalWithCode(factory.Logger, errorcode.CommonFinalizerOperationFailed, "Failed to get internode TLS server config", err)
 	}
 
 	listener, err := tls.Listen("tcp", ringpopHostAddress, serverTLSConfig)
 	if err != nil {
-		factory.Logger.Fatal("Failed to start ringpop TLS listener", tag.Error(err), tag.Address(ringpopHostAddress))
+		log.FatalWithCode(factory.Logger, errorcode.CommonFinalizerOperationFailed, "Failed to start ringpop TLS listener", err, tag.Address(ringpopHostAddress))
 	}
 
 	dialer := tls.Dialer{Config: clientTLSConfig}
 	tChannel, err := tchannel.NewChannel(ringpopServiceName, &tchannel.ChannelOptions{Dialer: dialer.DialContext})
 	if err != nil {
-		factory.Logger.Fatal("Failed to create ringpop TChannel", tag.Error(err))
+		log.FatalWithCode(factory.Logger, errorcode.CommonFinalizerOperationFailed, "Failed to create ringpop TChannel", err)
 	}
 
 	if err := tChannel.Serve(listener); err != nil {
-		factory.Logger.Fatal("Failed to serve ringpop listener", tag.Error(err), tag.Address(ringpopHostAddress))
+		log.FatalWithCode(factory.Logger, errorcode.CommonFinalizerOperationFailed, "Failed to serve ringpop listener", err, tag.Address(ringpopHostAddress))
 	}
 	return tChannel
 }
 
 func (factory *factory) getListenIP() net.IP {
 	if factory.RPCConfig.BindOnLocalHost && len(factory.RPCConfig.BindOnIP) > 0 {
-		factory.Logger.Fatal("ListenIP failed, bindOnLocalHost and bindOnIP are mutually exclusive")
+		log.FatalWithCode(factory.Logger, errorcode.CommonFinalizerOperationFailed, "ListenIP failed, bindOnLocalHost and bindOnIP are mutually exclusive", nil)
 		return nil
 	}
 
@@ -224,13 +225,13 @@ func (factory *factory) getListenIP() net.IP {
 			return ip
 		}
 
-		factory.Logger.Fatal("ListenIP failed, unable to parse bindOnIP value", tag.Address(factory.RPCConfig.BindOnIP))
+		log.FatalWithCode(factory.Logger, errorcode.CommonFinalizerOperationFailed, "ListenIP failed, unable to parse bindOnIP value", nil, tag.Address(factory.RPCConfig.BindOnIP))
 		return nil
 	}
 
 	ip, err := config.ListenIP()
 	if err != nil {
-		factory.Logger.Fatal("ListenIP failed", tag.Error(err))
+		log.FatalWithCode(factory.Logger, errorcode.CommonFinalizerOperationFailed, "ListenIP failed", err)
 		return nil
 	}
 	return ip

@@ -9,6 +9,7 @@ import (
 
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/goro"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -109,7 +110,7 @@ func (dd *deadlockDetector) Stop() error {
 }
 
 func (dd *deadlockDetector) detected(name string) {
-	dd.logger.Error("potential deadlock detected", tag.Name(name))
+	log.ErrorWithCode(dd.logger, errorcode.DeadlockDetected, "potential deadlock detected", nil, tag.Name(name))
 
 	metrics.DDSuspectedDeadlocks.With(dd.metricsHandler).Record(1)
 
@@ -123,20 +124,20 @@ func (dd *deadlockDetector) detected(name string) {
 	}
 
 	if dd.config.AbortProcess() {
-		dd.logger.Fatal("deadlock detected", tag.Name(name))
+		log.FatalWithCode(dd.logger, errorcode.DeadlockDetected, "deadlock detected", nil, tag.Name(name))
 	}
 }
 
 func (dd *deadlockDetector) dumpGoroutines() {
 	profile := pprof.Lookup("goroutine")
 	if profile == nil {
-		dd.logger.Error("could not find goroutine profile")
+		log.ErrorWithCode(dd.logger, errorcode.DeadlockProfileNotFound, "could not find goroutine profile", nil)
 		return
 	}
 	var b strings.Builder
 	err := profile.WriteTo(&b, 1) // 1 is magic value that means "text format"
 	if err != nil {
-		dd.logger.Error("failed to get goroutine profile", tag.Error(err))
+		log.ErrorWithCode(dd.logger, errorcode.DeadlockProfileFailed, "failed to get goroutine profile", err)
 		return
 	}
 	// write it as a single log line with embedded newlines.

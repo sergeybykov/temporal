@@ -9,6 +9,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/persistence"
@@ -174,7 +175,7 @@ func DataStoreFactoryProvider(
 	case defaultStoreCfg.CustomDataStoreConfig != nil:
 		dataStoreFactory = abstractDataStoreFactory.NewFactory(*defaultStoreCfg.CustomDataStoreConfig, r, string(clusterName), logger, metricsHandler)
 	default:
-		logger.Fatal("invalid config: one of cassandra or sql params must be specified for default data store")
+		log.FatalWithCode(logger, errorcode.CommonPersistenceMetricClientOperationFailed, "invalid config: one of cassandra or sql params must be specified for default data store", nil)
 	}
 
 	if defaultStoreCfg.FaultInjection != nil {

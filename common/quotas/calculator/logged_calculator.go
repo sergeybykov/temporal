@@ -4,6 +4,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 )
@@ -98,6 +99,7 @@ func (l *quotaLogger[T]) updateQuota(newQuota T) {
 	}
 
 	l.logger.Info("Quota changed",
+		tag.ErrorCode(errorcode.CommonNexusOperationFailed),
 		tag.NewAnyTag("current-quota", currentQuota),
 		tag.NewAnyTag("new-quota", newQuota),
 	)

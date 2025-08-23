@@ -7,8 +7,8 @@ import (
 
 	"go.temporal.io/api/serviceerror"
 	replicationspb "go.temporal.io/server/api/replication/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/persistence"
 )
 
@@ -84,7 +84,7 @@ func (d *dlqMessageHandlerImpl) Purge(
 		ctx,
 		lastMessageID,
 	); err != nil {
-		d.logger.Error("Failed to update DLQ ack level after purging messages", tag.Error(err))
+		log.ErrorWithCode(d.logger, errorcode.CommonNamespaceReplicationOperationFailed, "Failed to update DLQ ack level after purging messages", err)
 	}
 
 	return nil
@@ -134,11 +134,11 @@ func (d *dlqMessageHandlerImpl) Merge(
 		ackLevel,
 		ackedMessageID,
 	); err != nil {
-		d.logger.Error("failed to delete merged tasks on merging namespace DLQ message", tag.Error(err))
+		log.ErrorWithCode(d.logger, errorcode.CommonNamespaceReplicationOperationFailed, "failed to delete merged tasks on merging namespace DLQ message", err)
 		return nil, err
 	}
 	if err := d.namespaceReplicationQueue.UpdateDLQAckLevel(ctx, ackedMessageID); err != nil {
-		d.logger.Error("failed to update ack level on merging namespace DLQ message", tag.Error(err))
+		log.ErrorWithCode(d.logger, errorcode.CommonNamespaceReplicationOperationFailed, "failed to update ack level on merging namespace DLQ message", err)
 	}
 
 	return token, nil

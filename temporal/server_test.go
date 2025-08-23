@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	_ "go.temporal.io/server/common/persistence/sql/sqlplugin/sqlite" // needed to register the sqlite plugin
@@ -132,7 +133,7 @@ func (d *errorLogDetector) logUnexpected(operation string, msg string, tags []ta
 
 	msg = fmt.Sprintf("unexpected %v log: %v", operation, msg)
 	d.t.Error(msg)
-	d.logger.Error(msg, tags...)
+	log.ErrorWithCode(d.logger, errorcode.TestExecutionFailure, msg, nil, tags...)
 }
 
 func (d *errorLogDetector) Debug(string, ...tag.Tag) {}

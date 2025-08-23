@@ -25,7 +25,9 @@
 package errorcode
 
 func init() {
-	// Register all error codes
+	// Register all error codes (Total: 242 codes across all components)
+	// Infrastructure: 20 codes, Frontend: 34 codes, History: 21 codes
+	// Matching: 19 codes, Worker: 148 codes (includes multiple components)
 	registerInfraCodes()
 	registerFrontendCodes()
 	registerHistoryCodes()
@@ -34,56 +36,46 @@ func init() {
 }
 
 func registerInfraCodes() {
+	// Total: 20 error codes
 	// Persistence (1100-1199)
 	Register(1101, ComponentInfra, "Database connection failed")
 	Register(1102, ComponentInfra, "Transaction commit failed")
-	Register(1103, ComponentInfra, "Persistence timeout")
-	Register(1104, ComponentInfra, "Nexus endpoint create/update failed")
-	Register(1105, ComponentInfra, "Nexus endpoint get failed")
-	Register(1106, ComponentInfra, "Next page token serialization failed")
-	Register(1107, ComponentInfra, "Mutable state retrieval failed")
-	Register(1108, ComponentInfra, "History branch trim failed")
-	Register(1109, ComponentInfra, "Nexus endpoints table version increment failed")
-	Register(1110, ComponentInfra, "Nexus endpoint delete operation failed")
-	Register(1111, ComponentInfra, "Nexus endpoint delete rows affected error")
-	Register(1112, ComponentInfra, "Service startup failed")
-	Register(1113, ComponentInfra, "Service shutdown failed")
-	Register(1114, ComponentInfra, "Cluster metadata configuration error")
-	Register(1115, ComponentInfra, "Service lifecycle hook failed")
+	Register(1103, ComponentInfra, "Nexus endpoint create/update failed")
+	Register(1104, ComponentInfra, "Nexus endpoint get failed")
+	Register(1105, ComponentInfra, "Next page token serialization failed")
+	Register(1106, ComponentInfra, "Mutable state retrieval failed")
+	Register(1107, ComponentInfra, "History branch trim failed")
+	Register(1108, ComponentInfra, "Nexus endpoints table version increment failed")
+	Register(1109, ComponentInfra, "Nexus endpoint delete operation failed")
+	Register(1110, ComponentInfra, "Nexus endpoint delete rows affected error")
+	Register(1111, ComponentInfra, "Service startup failed")
+	Register(1112, ComponentInfra, "Service shutdown failed")
+	Register(1113, ComponentInfra, "Cluster metadata configuration error")
+	Register(1114, ComponentInfra, "Service lifecycle hook failed")
 
 	// Clustering (1200-1299)
-	Register(1201, ComponentInfra, "Cluster membership change")
-	Register(1202, ComponentInfra, "Ring membership failed")
-	Register(1203, ComponentInfra, "Ring refresh failed")
-	Register(1204, ComponentInfra, "Cluster metadata refresh failed")
-	Register(1205, ComponentInfra, "Ring refresh on scheduled event failed")
-	Register(1206, ComponentInfra, "Listener notification channel full")
-	Register(1207, ComponentInfra, "Ring refresh by request failed")
-	Register(1208, ComponentInfra, "Periodic ring refresh failed")
+	Register(1201, ComponentInfra, "Ring refresh failed")
+	Register(1202, ComponentInfra, "Cluster metadata refresh failed")
+	Register(1203, ComponentInfra, "Ring refresh on scheduled event failed")
+	Register(1204, ComponentInfra, "Listener notification channel full")
+	Register(1205, ComponentInfra, "Ring refresh by request failed")
+	Register(1206, ComponentInfra, "Periodic ring refresh failed")
 }
 
 func registerFrontendCodes() {
+	// Total: 34 error codes
 	// Request Validation (2000-2099)
 	Register(2001, ComponentFrontend, "Invalid workflow ID provided")
-	Register(2002, ComponentFrontend, "Invalid namespace name")
-	Register(2003, ComponentFrontend, "Missing required request parameter")
-	Register(2004, ComponentFrontend, "Invalid request format")
+	Register(2002, ComponentFrontend, "Invalid request format")
 
 	// Authentication/Authorization (2100-2199)
 	Register(2101, ComponentFrontend, "Authentication required")
-	Register(2102, ComponentFrontend, "Invalid authentication token")
-	Register(2103, ComponentFrontend, "Insufficient permissions")
-	Register(2104, ComponentFrontend, "Token expired")
+	Register(2102, ComponentFrontend, "Insufficient permissions")
 
 	// Rate Limiting (2200-2299)
-	Register(2201, ComponentFrontend, "Request rate limit exceeded")
-	Register(2202, ComponentFrontend, "Namespace rate limit exceeded")
-	Register(2203, ComponentFrontend, "User rate limit exceeded")
 
 	// Namespace Operations (2300-2399)
-	Register(2301, ComponentFrontend, "Namespace not found")
-	Register(2302, ComponentFrontend, "Namespace already exists")
-	Register(2303, ComponentFrontend, "Namespace operation failed")
+	Register(2301, ComponentFrontend, "Namespace operation failed")
 
 	// Worker and Task Queue Operations (2400-2499)
 	Register(2401, ComponentFrontend, "Failed to record worker heartbeat")
@@ -126,6 +118,7 @@ func registerFrontendCodes() {
 }
 
 func registerHistoryCodes() {
+	// Total: 21 error codes
 	// Workflow Execution (3000-3099)
 	Register(3001, ComponentHistory, "Workflow execution not found")
 	Register(3002, ComponentHistory, "Workflow in invalid state")
@@ -133,53 +126,46 @@ func registerHistoryCodes() {
 	Register(3004, ComponentHistory, "Workflow task processing failed")
 
 	// Activity Management (3100-3199)
-	Register(3101, ComponentHistory, "Activity not found")
-	Register(3102, ComponentHistory, "Activity execution failed")
-	Register(3103, ComponentHistory, "Activity timeout exceeded")
 
-	// State Management (3300-3399)
-	Register(3301, ComponentHistory, "Shard ownership lost")
-	Register(3302, ComponentHistory, "Current branch changed")
-	Register(3303, ComponentHistory, "Condition check failed")
+	// State Management
+	Register(3005, ComponentHistory, "Current branch changed")
+	Register(3006, ComponentHistory, "Condition check failed")
 
-	// Transfer Queue Operations (3400-3499)
-	Register(3401, ComponentHistory, "Transfer request cancel failed")
-	Register(3402, ComponentHistory, "Transfer signal workflow failed")
-	Register(3403, ComponentHistory, "Transfer child workflow start failed")
-	Register(3404, ComponentHistory, "Transfer auto-reset workflow failed")
+	// Transfer Queue Operations
+	Register(3007, ComponentHistory, "Transfer request cancel failed")
+	Register(3008, ComponentHistory, "Transfer signal workflow failed")
+	Register(3009, ComponentHistory, "Transfer child workflow start failed")
+	Register(3010, ComponentHistory, "Transfer auto-reset workflow failed")
 
-	// Workflow State Management (3500-3599)
-	Register(3501, ComponentHistory, "Mutable state dirty transaction error")
-	Register(3502, ComponentHistory, "Database data inconsistency detected")
-	Register(3503, ComponentHistory, "Sync versioned transition task missing")
+	// Workflow State Management
+	Register(3011, ComponentHistory, "Mutable state dirty transaction error")
+	Register(3012, ComponentHistory, "Database data inconsistency detected")
+	Register(3013, ComponentHistory, "Sync versioned transition task missing")
 
-	// Queue Processing (3600-3699)
-	Register(3601, ComponentHistory, "Task processor not registered")
-	Register(3602, ComponentHistory, "Engine retrieval failed")
-	Register(3603, ComponentHistory, "DLQ replication tasks fetch failed")
+	// Queue Processing
+	Register(3014, ComponentHistory, "Task processor not registered")
+	Register(3015, ComponentHistory, "Engine retrieval failed")
+	Register(3016, ComponentHistory, "DLQ replication tasks fetch failed")
 
-	// Archival Operations (3700-3799)
-	Register(3701, ComponentHistory, "Visibility URI parsing failed")
-	Register(3702, ComponentHistory, "History URI parsing failed")
+	// Archival Operations
+	Register(3017, ComponentHistory, "Visibility URI parsing failed")
+	Register(3018, ComponentHistory, "History URI parsing failed")
 
-	// Queue Executable Operations (3800-3899)
-	Register(3801, ComponentHistory, "Task payload serialization for OTEL span failed")
-	Register(3802, ComponentHistory, "Queue executable panic captured")
+	// Queue Executable Operations
+	Register(3019, ComponentHistory, "Task payload serialization for OTEL span failed")
+	Register(3020, ComponentHistory, "Queue executable panic captured")
+	Register(3021, ComponentHistory, "Outbound task executor failed")
 }
 
 func registerMatchingCodes() {
+	// Total: 19 error codes
 	// Task Queue Management (4000-4099)
-	Register(4001, ComponentMatching, "Task queue not found")
-	Register(4002, ComponentMatching, "Task queue partition failed")
-	Register(4003, ComponentMatching, "Task forwarding failed")
-	Register(4004, ComponentMatching, "Task dropped due to non-retryable errors")
-	Register(4005, ComponentMatching, "Deployment registration channel unlocked error")
-	Register(4006, ComponentMatching, "Partition force load failed")
+	Register(4001, ComponentMatching, "Task queue partition failed")
+	Register(4002, ComponentMatching, "Task dropped due to non-retryable errors")
+	Register(4003, ComponentMatching, "Deployment registration channel unlocked error")
+	Register(4004, ComponentMatching, "Partition force load failed")
 
 	// Worker Management (4100-4199)
-	Register(4101, ComponentMatching, "No available workers")
-	Register(4102, ComponentMatching, "Worker polling failed")
-	Register(4103, ComponentMatching, "Worker assignment failed")
 
 	// Persistence Operations (4200-4299)
 	Register(4201, ComponentMatching, "Task store operation failure")
@@ -206,6 +192,7 @@ func registerMatchingCodes() {
 }
 
 func registerWorkerCodes() {
+	// Total: 148 error codes (includes codes for multiple components)
 	// System Workers (5000-5099)
 	Register(5001, ComponentWorker, "System worker startup failed")
 	Register(5002, ComponentWorker, "Background task processing failed")
@@ -218,7 +205,6 @@ func registerWorkerCodes() {
 
 	// Archival (5100-5199)
 	Register(5101, ComponentWorker, "History archival failed")
-	Register(5102, ComponentWorker, "Visibility archival failed")
 
 	// Scanner Operations (5200-5299)
 	Register(5201, ComponentWorker, "Scanner heartbeat details recovery failed")
@@ -234,15 +220,14 @@ func registerWorkerCodes() {
 	Register(5401, ComponentWorker, "Delete namespace child workflow error")
 
 	// Batcher Operations (5500-5599)
-	Register(5501, ComponentWorker, "Batch operation completion failed")
-	Register(5502, ComponentWorker, "Batch operation namespace mismatch")
-	Register(5503, ComponentWorker, "Batch reset options deserialization failed")
-	Register(5504, ComponentWorker, "Batch post-reset operation deserialization failed")
-	Register(5505, ComponentWorker, "Batch heartbeat recovery failed")
-	Register(5506, ComponentWorker, "Batch workflow count estimation failed")
-	Register(5507, ComponentWorker, "Batch operation task processing failed")
-	Register(5508, ComponentWorker, "Batch workflow history reverse read failed")
-	Register(5509, ComponentWorker, "Batch workflow history read failed")
+	Register(5501, ComponentWorker, "Batch operation namespace mismatch")
+	Register(5502, ComponentWorker, "Batch reset options deserialization failed")
+	Register(5503, ComponentWorker, "Batch post-reset operation deserialization failed")
+	Register(5504, ComponentWorker, "Batch heartbeat recovery failed")
+	Register(5505, ComponentWorker, "Batch workflow count estimation failed")
+	Register(5506, ComponentWorker, "Batch operation task processing failed")
+	Register(5507, ComponentWorker, "Batch workflow history reverse read failed")
+	Register(5508, ComponentWorker, "Batch workflow history read failed")
 
 	// Worker Deployment Operations (5600-5699)
 	Register(5601, ComponentWorker, "Worker deployment query handler setup failed")
@@ -253,31 +238,24 @@ func registerWorkerCodes() {
 	Register(5606, ComponentWorker, "Worker deployment version registration failed")
 	Register(5607, ComponentWorker, "Worker deployment version polling failed")
 	Register(5608, ComponentWorker, "Worker deployment version validation failed")
-	Register(5609, ComponentWorker, "Worker deployment version timeout")
 
 	// Scheduler Operations (5700-5799)
-	Register(5701, ComponentWorker, "Scheduler workflow error")
-	Register(5702, ComponentWorker, "Scheduler action execution failed")
-	Register(5703, ComponentWorker, "Scheduler policy validation failed")
-	Register(5704, ComponentWorker, "Scheduler trigger evaluation failed")
-	Register(5705, ComponentWorker, "Scheduler state transition failed")
+	Register(5701, ComponentWorker, "Scheduler action execution failed")
+	Register(5702, ComponentWorker, "Scheduler policy validation failed")
+	Register(5703, ComponentWorker, "Scheduler trigger evaluation failed")
+	Register(5704, ComponentWorker, "Scheduler state transition failed")
 
 	// Scanner Operations (5800-5899)
 	Register(5801, ComponentWorker, "Scanner execution task processing failed")
 	Register(5802, ComponentWorker, "Scanner history scavenging failed")
-	Register(5803, ComponentWorker, "Scanner task queue scavenging failed")
-	Register(5804, ComponentWorker, "Scanner build IDs scavenging failed")
 
 	// Migration Operations (5900-5999)
 	Register(5901, ComponentWorker, "Migration activity execution failed")
-	Register(5902, ComponentWorker, "Migration workflow processing failed")
-	Register(5903, ComponentWorker, "Migration validation failed")
 
 	// Delete Namespace Operations (6000-6099)
-	Register(6001, ComponentWorker, "Delete namespace workflow failed")
-	Register(6002, ComponentWorker, "Delete namespace executions failed")
-	Register(6003, ComponentWorker, "Delete namespace reclaim resources failed")
-	Register(6004, ComponentWorker, "Delete namespace activities failed")
+	Register(6001, ComponentWorker, "Delete namespace executions failed")
+	Register(6002, ComponentWorker, "Delete namespace reclaim resources failed")
+	Register(6003, ComponentWorker, "Delete namespace activities failed")
 
 	// Common Components Range: 7000-7999
 
@@ -288,34 +266,23 @@ func registerWorkerCodes() {
 	Register(7101, ComponentArchiver, "History archival operation failed")
 	Register(7102, ComponentArchiver, "Visibility archival operation failed")
 	Register(7103, ComponentArchiver, "Archival upload failed")
-	Register(7104, ComponentArchiver, "Archival download failed")
 
 	// Tools and Utilities (7200-7299)
-	Register(7201, ComponentTools, "Cassandra tool operation failed")
-	Register(7202, ComponentTools, "SQL tool operation failed")
-	Register(7203, ComponentTools, "Migration tool operation failed")
-	Register(7204, ComponentTools, "CQL client operation failed")
-	Register(7205, ComponentTools, "Database connection validation failed")
-	Register(7206, ComponentTools, "Schema embed operation failed")
+	Register(7201, ComponentTools, "CQL client operation failed")
+	Register(7202, ComponentTools, "Schema embed operation failed")
 
 	// Component Operations (7300-7399)
-	Register(7301, ComponentCommon, "Nexus operation handler failed")
-	Register(7302, ComponentCommon, "Callback invocation failed")
-	Register(7303, ComponentCommon, "Scheduler executor failed")
-	Register(7304, ComponentCommon, "Component initialization failed")
 
 	// Infrastructure Operations (7400-7499)
 	Register(7401, ComponentInfra, "Service lifecycle operation failed")
 	Register(7402, ComponentInfra, "Metrics provider operation failed")
-	Register(7403, ComponentInfra, "Dynamic config operation failed")
-	Register(7404, ComponentInfra, "Task scheduler operation failed")
+	Register(7403, ComponentInfra, "Task scheduler operation failed")
 
 	// Persistence Operations (7500-7599)
 	Register(7501, ComponentPersist, "Elasticsearch processor operation failed")
 	Register(7502, ComponentPersist, "Visibility store operation failed")
 	Register(7503, ComponentPersist, "NDC history importer operation failed")
 	Register(7504, ComponentPersist, "History manager operation failed")
-	Register(7505, ComponentPersist, "DLQ metrics emitter operation failed")
 
 	// History Service Operations (7800-7899)
 	Register(7801, ComponentHistory, "Workflow transaction operation failed")
@@ -329,12 +296,8 @@ func registerWorkerCodes() {
 	Register(7902, ComponentCommon, "Ringpop monitor operation failed")
 
 	// Namespace Operations (8000-8099)
-	Register(8001, ComponentCommon, "Namespace replication task executor operation failed")
 
 	// Test and Development Operations (7600-7699)
-	Register(7601, ComponentTest, "Test data converter operation failed")
-	Register(7602, ComponentTest, "Test execution failure")
-	Register(7603, ComponentTest, "Development utility failed")
 
 	// Log Migration Operations (7700-7799)
 	Register(7701, ComponentCommon, "Log migration operation failed")
@@ -345,30 +308,26 @@ func registerWorkerCodes() {
 	Register(8103, ComponentCommon, "Task scheduler operation failed")
 	Register(8104, ComponentCommon, "Finalizer operation failed")
 	Register(8105, ComponentCommon, "Soft assert operation failed")
-	Register(8106, ComponentCommon, "Nexus endpoint registry operation failed")
-	Register(8107, ComponentCommon, "XDC cache operation failed")
-	Register(8108, ComponentCommon, "Visibility manager metrics operation failed")
-	Register(8109, ComponentCommon, "Persistence metric client operation failed")
-	Register(8110, ComponentCommon, "Nexus endpoint manager operation failed")
-	Register(8111, ComponentCommon, "Namespace registry operation failed")
-	Register(8112, ComponentCommon, "DLQ message handler operation failed")
-	Register(8113, ComponentCommon, "Utility operation failed")
-	Register(8114, ComponentCommon, "Finalizer timeout")
-	Register(8115, ComponentCommon, "Deadlock detected")
-	Register(8116, ComponentCommon, "Deadlock profile not found")
-	Register(8117, ComponentCommon, "Deadlock profile failed")
-	Register(8118, ComponentPersist, "DLQ list failed")
-	Register(8119, ComponentPersist, "DLQ process queue name failed")
-	Register(8120, ComponentPersist, "DLQ category not found")
-	Register(8121, ComponentPersist, "DLQ history service lookup failed")
-	Register(8122, ComponentCommon, "XDC cache events truncated")
+	Register(8106, ComponentCommon, "XDC cache operation failed")
+	Register(8107, ComponentCommon, "Visibility manager metrics operation failed")
+	Register(8108, ComponentCommon, "Persistence metric client operation failed")
+	Register(8109, ComponentCommon, "Nexus endpoint manager operation failed")
+	Register(8110, ComponentCommon, "Namespace registry operation failed")
+	Register(8111, ComponentCommon, "Utility operation failed")
+	Register(8112, ComponentCommon, "Finalizer timeout")
+	Register(8113, ComponentCommon, "Deadlock detected")
+	Register(8114, ComponentCommon, "Deadlock profile not found")
+	Register(8115, ComponentCommon, "Deadlock profile failed")
+	Register(8116, ComponentPersist, "DLQ list failed")
+	Register(8117, ComponentPersist, "DLQ process queue name failed")
+	Register(8118, ComponentPersist, "DLQ category not found")
+	Register(8119, ComponentPersist, "DLQ history service lookup failed")
+	Register(8120, ComponentCommon, "XDC cache events truncated")
 
 	// Schema and Embedding (8200-8299)
 	Register(8201, ComponentSchema, "Schema embed operation failed")
 
 	// Additional Archival (8300-8399)
-	Register(8301, ComponentArchiver, "S3 visibility archiver operation failed")
-	Register(8302, ComponentArchiver, "Additional archival operation failed")
 
 	// Additional History Service Operations (8400-8499)
 	Register(8401, ComponentHistory, "Task priority unknown key")
@@ -433,25 +392,22 @@ func registerWorkerCodes() {
 	Register(9120, ComponentHistory, "History queue rate limiter configuration")
 	Register(9121, ComponentHistory, "History queue task retrieve failed")
 	Register(9122, ComponentHistory, "History scheduler creation failed")
-	Register(9123, ComponentHistory, "Replication task reader error")
-	Register(9124, ComponentHistory, "Stream close error")
-	Register(9125, ComponentHistory, "Replication ack level update failed")
-	Register(9126, ComponentHistory, "Replication task save failed")
-	Register(9127, ComponentHistory, "History replication task conversion failed")
-	Register(9128, ComponentHistory, "Replication service error")
-	Register(9129, ComponentHistory, "Rate limiter wait failed")
-	Register(9130, ComponentHistory, "Version history get failed")
-	Register(9131, ComponentHistory, "History workflow size constraint violation")
-	Register(9132, ComponentMatching, "Matching persistent store failure")
-	Register(9133, ComponentHistory, "Replication task fetch failed")
-	Register(9134, ComponentHistory, "History replication cleanup failed")
-	Register(9135, ComponentHistory, "History replication DLQ operation failed")
-	Register(9136, ComponentWorker, "Task queue delete error")
-	Register(9137, ComponentWorker, "Scavenger delete handler error")
-	Register(9138, ComponentWorker, "Task queue list error")
-	Register(9139, ComponentHistory, "History sync workflow state retrieve failed")
-	Register(9140, ComponentHistory, "History sync workflow state update failed")
-	Register(9141, ComponentWorker, "Workflow start error")
+	Register(9123, ComponentHistory, "Stream close error")
+	Register(9124, ComponentHistory, "Replication task save failed")
+	Register(9125, ComponentHistory, "History replication task conversion failed")
+	Register(9126, ComponentHistory, "Rate limiter wait failed")
+	Register(9127, ComponentHistory, "Version history get failed")
+	Register(9128, ComponentHistory, "History workflow size constraint violation")
+	Register(9129, ComponentMatching, "Matching persistent store failure")
+	Register(9130, ComponentHistory, "Replication task fetch failed")
+	Register(9131, ComponentHistory, "History replication cleanup failed")
+	Register(9132, ComponentHistory, "History replication DLQ operation failed")
+	Register(9133, ComponentWorker, "Task queue delete error")
+	Register(9134, ComponentWorker, "Scavenger delete handler error")
+	Register(9135, ComponentWorker, "Task queue list error")
+	Register(9136, ComponentHistory, "History sync workflow state retrieve failed")
+	Register(9137, ComponentHistory, "History sync workflow state update failed")
+	Register(9138, ComponentWorker, "Workflow start error")
 }
 
 // Constants for easy access
@@ -459,127 +415,130 @@ const (
 	// Infrastructure Range: 1000-1999
 	InfraDBConnectionFailed                        = 1101
 	InfraTransactionFailed                         = 1102
-	InfraPersistenceTimeout                        = 1103
-	InfraNexusEndpointCreateUpdateFailed           = 1104
-	InfraNexusEndpointGetFailed                    = 1105
-	InfraNextPageTokenSerializationFailed          = 1106
-	InfraMutableStateRetrievalFailed               = 1107
-	InfraHistoryBranchTrimFailed                   = 1108
-	InfraNexusEndpointsTableVersionIncrementFailed = 1109
-	InfraNexusEndpointDeleteOperationFailed        = 1110
-	InfraNexusEndpointDeleteRowsAffectedError      = 1111
-	InfraServiceStartupFailed                      = 1112
-	InfraServiceShutdownFailed                     = 1113
-	InfraClusterMetadataConfigurationError         = 1114
-	InfraServiceLifecycleHookFailed                = 1115
-	InfraClusterMembershipChange                   = 1201
-	InfraRingMembershipFailed                      = 1202
-	InfraRingRefreshFailed                         = 1203
-	InfraClusterMetadataRefreshFailed              = 1204
-	InfraRingRefreshScheduledEventFailed           = 1205
-	InfraListenerNotificationChannelFull           = 1206
-	InfraRingRefreshByRequestFailed                = 1207
-	InfraPeriodicRingRefreshFailed                 = 1208
+	InfraNexusEndpointCreateUpdateFailed           = 1103
+	InfraNexusEndpointGetFailed                    = 1104
+	InfraNextPageTokenSerializationFailed          = 1105
+	InfraMutableStateRetrievalFailed               = 1106
+	InfraHistoryBranchTrimFailed                   = 1107
+	InfraNexusEndpointsTableVersionIncrementFailed = 1108
+	InfraNexusEndpointDeleteOperationFailed        = 1109
+	InfraNexusEndpointDeleteRowsAffectedError      = 1110
+	InfraServiceStartupFailed                      = 1111
+	InfraServiceShutdownFailed                     = 1112
+	InfraClusterMetadataConfigurationError         = 1113
+	InfraServiceLifecycleHookFailed                = 1114
+	InfraRingRefreshFailed                         = 1201
+	InfraClusterMetadataRefreshFailed              = 1202
+	InfraRingRefreshScheduledEventFailed           = 1203
+	InfraListenerNotificationChannelFull           = 1204
+	InfraRingRefreshByRequestFailed                = 1205
+	InfraPeriodicRingRefreshFailed                 = 1206
 
-	// Frontend Service Range: 2000-2999
-	FrontendInvalidWorkflowID         = 2001
-	FrontendInvalidNamespace          = 2002
-	FrontendMissingParameter          = 2003
-	FrontendInvalidRequestFormat      = 2004
-	FrontendAuthRequired              = 2101
-	FrontendInvalidToken              = 2102
-	FrontendInsufficientPerms         = 2103
-	FrontendTokenExpired              = 2104
-	FrontendRateLimitExceeded         = 2201
-	FrontendNamespaceRateLimit        = 2202
-	FrontendUserRateLimit             = 2203
-	FrontendNamespaceNotFound         = 2301
-	FrontendNamespaceExists           = 2302
-	FrontendNamespaceOpFailed         = 2303
-	FrontendWorkerHeartbeatFailed     = 2401
-	FrontendMatchingServiceCallFailed = 2402
-	FrontendWorkerReachabilityFailed  = 2403
-	FrontendScheduleDecodingFailed    = 2404
-	FrontendNexusTaskQueuePollFailed  = 2405
+	// Frontend Service Range: 2000-2999 (sorted by error code)
+	FrontendInvalidWorkflowID                           = 2001
+	FrontendInvalidRequestFormat                        = 2002
+	FrontendFrontendFxFailed                            = 2010 // service/frontend/fx.go:235 - creating gRPC server options failed
+	FrontendFrontendHttpapiserverFailed                 = 2011 // service/frontend/http_api_server.go:309 - Failed to marshal error message
+	FrontendFrontendNexushandlerInvalidOperationFailed  = 2012 // service/frontend/nexus_handler.go:414 - invalid input
+	FrontendFrontendNexushandlerInvalidOperationFailed2 = 2013 // service/frontend/nexus_handler.go:630 - invalid Nexus cancel operation.
+	FrontendFrontendServiceFailed                       = 2014 // service/frontend/service.go:427 - Failed to serve on frontend listener
+	FrontendFrontendServiceFailed2                      = 2015 // service/frontend/service.go:434 - Failed to serve HTTP API server
+	FrontendFrontendWorkflowhandlerOperationFailed      = 2016 // service/frontend/workflow_handler.go:4753 - Unknown batch operation type
+	FrontendFrontendWorkflowhandlerError                = 2017 // service/frontend/workflow_handler.go:5436
+	FrontendAuthRequired                                = 2101
+	FrontendInsufficientPerms                           = 2102
+	FrontendNamespaceOpFailed                           = 2301
+	FrontendWorkerHeartbeatFailed                       = 2401
+	FrontendMatchingServiceCallFailed                   = 2402
+	FrontendWorkerReachabilityFailed                    = 2403
+	FrontendScheduleDecodingFailed                      = 2404
+	FrontendNexusTaskQueuePollFailed                    = 2405
+	FrontendSearchAttributesGetFailed                   = 2501
+	FrontendReplicationMessagesServerCloseFailed        = 2502
+	FrontendHistoryHostDescribeFailed                   = 2503
+	FrontendScheduleMemoEncodingFailed                  = 2601
+	FrontendNexusOperationPanicCaptured                 = 2701
+	FrontendNexusPayloadSizeExceedsLimit                = 2702
+	FrontendNexusLinkURLParsingFailed                   = 2703
+	FrontendNexusForwardedStartOperationFailed          = 2704
+	FrontendNexusForwardedCancelOperationFailed         = 2705
+	FrontendNexusHTTPClientCreationFailed               = 2706
+	FrontendNexusServiceBaseURLConstructionFailed       = 2707
+	FrontendNexusFailureMarshalingFailed                = 2708
+	FrontendNexusResponseBodyWriteFailed                = 2709
+	FrontendNexusInvalidURLProvided                     = 2710
+	FrontendNexusInvalidNamespaceName                   = 2711
+	FrontendNexusClaimsRetrievalFailed                  = 2712
+	FrontendNexusInvalidEndpointID                      = 2713
+	FrontendNexusNamespaceLookupFailed                  = 2714
+	FrontendOpenAPISpecReaderInitFailed                 = 2715
+	FrontendOpenAPISpecSendFailed                       = 2716
+	FrontendOpenAPISpecChecksumVerificationFailed       = 2717
+	FrontendNexusEndpointsPersistenceListingFailed      = 2718
+	FrontendNexusEndpointClientGenericError             = 2719
+	FrontendTaskQueueKindUnspecified                    = 2901
 
-	// Admin Operations (2500-2599)
-	FrontendSearchAttributesGetFailed            = 2501
-	FrontendReplicationMessagesServerCloseFailed = 2502
-	FrontendHistoryHostDescribeFailed            = 2503
+	// History Service Range: 3000-3999 (sorted by error code)
+	HistoryWorkflowNotFound                          = 3001
+	HistoryInvalidState                              = 3002
+	HistoryWorkflowExists                            = 3003
+	HistoryTaskProcessingFailed                      = 3004
+	HistoryCurrentBranchChanged                      = 3005
+	HistoryConditionFailed                           = 3006
+	HistoryTransferRequestCancelFailed               = 3007
+	HistoryTransferSignalFailed                      = 3008
+	HistoryTransferChildWorkflowFailed               = 3009
+	HistoryTransferAutoResetFailed                   = 3010
+	HistoryMutableStateDirtyTransaction              = 3011
+	HistoryDataInconsistency                         = 3012
+	HistorySyncVersionedTransitionMissing            = 3013
+	HistoryTaskProcessorNotRegistered                = 3014
+	HistoryEngineRetrievalFailed                     = 3015
+	HistoryDLQReplicationTasksFailed                 = 3016
+	HistoryVisibilityURIParsingFailed                = 3017
+	HistoryArchivalURIParsingFailed                  = 3018
+	HistoryTaskPayloadSerializationFailed            = 3019
+	HistoryQueueExecutablePanicCaptured              = 3020
+	HistoryOutboundTaskExecutorFailed                = 3021
+	HistoryHistoryDescribeworkflowError2             = 3022 // service/history/api/describeworkflow/api.go:249
+	HistoryHistoryDescribeworkflowError3             = 3023 // service/history/api/describeworkflow/api.go:261
+	HistoryHistoryReapplyeventsResetOperationFailed  = 3024 // service/history/api/reapplyevents/api.go:146 - Cannot reset workflow. Ignoring reapply events.
+	HistoryHistoryTrimhistoryutilError               = 3025 // service/history/api/trim_history_util.go:53
+	HistoryHistoryUpdateworkflowError                = 3026 // service/history/api/updateworkflow/api.go:232
+	HistoryHistoryHandlerOperationFailed             = 3027 // service/history/handler.go:1674 - History engine not found for shard
+	HistoryHistoryHandlerOperationFailed2            = 3028 // service/history/handler.go:1679 - History engine not found for shard
+	HistoryHistoryHandlerFailed                      = 3029 // service/history/handler.go:1691 - Failed to get replication tasks for shard
+	HistoryHistoryHandlerOperationFailed3            = 3030 // service/history/handler.go:1752 - History engine not found for workflow ID.
+	HistoryHistoryHandlerOperationFailed4            = 3031 // service/history/handler.go:1757 - History engine not found for shard ID.
+	HistoryHistoryNdcError                           = 3032 // service/history/ndc/history_replicator.go:366
+	HistoryHistoryNdcError2                          = 3033 // service/history/ndc/history_replicator.go:374
+	HistoryHistoryNdcError3                          = 3034 // service/history/ndc/history_replicator.go:537
+	HistoryHistoryNdcError4                          = 3035 // service/history/ndc/history_replicator.go:557
+	HistoryHistoryReapplyeventsFailed                = 3036 // service/history/api/reapplyevents/api.go:166 - failed to re-apply stale events
+	HistoryHistoryReplicationFailed                  = 3037 // service/history/api/replication/get_dlq_tasks.go:22 - Failed to fetch DLQ replication messages.
+	HistoryHistoryReplicationError                   = 3038 // service/history/api/replication/get_tasks.go:62 - error updating replication level for shard
+	HistoryHistoryReplicationFailed2                 = 3039 // service/history/api/replication/get_tasks.go:73 - Failed to retrieve replication messages.
+	HistoryHistoryRespondworkflowtaskcompletedError  = 3040 // service/history/api/respondworkflowtaskcompleted/api.go:228
+	HistoryHistoryRespondworkflowtaskcompletedError2 = 3041 // service/history/api/respondworkflowtaskcompleted/api.go:948
+	HistoryHistoryDescribeworkflowError              = 3042 // service/history/api/describeworkflow/api.go:227
+	HistoryHistoryQueuesError                        = 3052 // service/history/queues/dlq_writer.go:106
+	HistoryHistoryQueuesError6                       = 3059 // service/history/queues/scheduler.go:106
+	HistoryServiceStartupFailed                      = 3200 // service/history/service.go:93 - Failed to serve on history listener
+	HistoryArchivalWorkflowFailed                    = 3201 // service/history/archival/archiver.go:132 - failed to archive workflow
 
-	// Schedule Operations (2600-2699)
-	FrontendScheduleMemoEncodingFailed = 2601
-
-	// Nexus Operations (2700-2799)
-	FrontendNexusOperationPanicCaptured            = 2701
-	FrontendNexusPayloadSizeExceedsLimit           = 2702
-	FrontendNexusLinkURLParsingFailed              = 2703
-	FrontendNexusForwardedStartOperationFailed     = 2704
-	FrontendNexusForwardedCancelOperationFailed    = 2705
-	FrontendNexusHTTPClientCreationFailed          = 2706
-	FrontendNexusServiceBaseURLConstructionFailed  = 2707
-	FrontendNexusFailureMarshalingFailed           = 2708
-	FrontendNexusResponseBodyWriteFailed           = 2709
-	FrontendNexusInvalidURLProvided                = 2710
-	FrontendNexusInvalidNamespaceName              = 2711
-	FrontendNexusClaimsRetrievalFailed             = 2712
-	FrontendNexusInvalidEndpointID                 = 2713
-	FrontendNexusNamespaceLookupFailed             = 2714
-	FrontendOpenAPISpecReaderInitFailed            = 2715
-	FrontendOpenAPISpecSendFailed                  = 2716
-	FrontendOpenAPISpecChecksumVerificationFailed  = 2717
-	FrontendNexusEndpointsPersistenceListingFailed = 2718
-	FrontendNexusEndpointClientGenericError        = 2719
-
-	// Warnings (2900-2999)
-	FrontendTaskQueueKindUnspecified = 2901
-
-	// History Service Range: 3000-3999
-	HistoryWorkflowNotFound     = 3001
-	HistoryInvalidState         = 3002
-	HistoryWorkflowExists       = 3003
-	HistoryTaskProcessingFailed = 3004
-	HistoryActivityNotFound     = 3101
-	HistoryActivityFailed       = 3102
-	HistoryActivityTimeout      = 3103
-	HistoryShardOwnershipLost   = 3301
-	HistoryCurrentBranchChanged = 3302
-	HistoryConditionFailed      = 3303
-
-	// Transfer Queue Operations (3400-3499)
-	HistoryTransferRequestCancelFailed = 3401
-	HistoryTransferSignalFailed        = 3402
-	HistoryTransferChildWorkflowFailed = 3403
-	HistoryTransferAutoResetFailed     = 3404
-
-	// Workflow State Management (3500-3599)
-	HistoryMutableStateDirtyTransaction   = 3501
-	HistoryDataInconsistency              = 3502
-	HistorySyncVersionedTransitionMissing = 3503
-
-	// Queue Processing (3600-3699)
-	HistoryTaskProcessorNotRegistered = 3601
-	HistoryEngineRetrievalFailed      = 3602
-	HistoryDLQReplicationTasksFailed  = 3603
-
-	// Archival Operations (3700-3799)
-	HistoryVisibilityURIParsingFailed = 3701
-	HistoryArchivalURIParsingFailed   = 3702
-
-	// Queue Executable Operations (3800-3899)
-	HistoryTaskPayloadSerializationFailed = 3801
-	HistoryQueueExecutablePanicCaptured   = 3802
-
-	// Matching Service Range: 4000-4999
-	MatchingTaskQueueNotFound                  = 4001
-	MatchingPartitionFailed                    = 4002
-	MatchingForwardingFailed                   = 4003
-	MatchingTaskDroppedNonRetryable            = 4004
-	MatchingDeploymentRegistrationError        = 4005
-	MatchingPartitionForceLoadFailed           = 4006
-	MatchingNoWorkers                          = 4101
-	MatchingWorkerPollingFailed                = 4102
-	MatchingWorkerAssignFailed                 = 4103
+	// Matching Service Range: 4000-4999 (sorted by error code)
+	MatchingPartitionFailed                    = 4001
+	MatchingTaskDroppedNonRetryable            = 4002
+	MatchingDeploymentRegistrationError        = 4003
+	MatchingPartitionForceLoadFailed           = 4004
+	MatchingMatchingMatchingengineError        = 4008 // service/matching/matching_engine.go:708
+	MatchingMatchingMatchingengineError2       = 4009 // service/matching/matching_engine.go:742
+	MatchingMatchingMatchingengineError3       = 4010 // service/matching/matching_engine.go:840
+	MatchingMatchingMatchingengineError5       = 4012 // service/matching/matching_engine.go:926
+	MatchingMatchingMatchingengineError6       = 4013 // service/matching/matching_engine.go:960
+	MatchingMatchingPritaskreaderError         = 4015 // service/matching/pri_task_reader.go:328 - nonretryable error processing spooled task
+	MatchingMatchingTaskreaderError            = 4017 // service/matching/task_reader.go:115 - taskReader: unexpected error dispatching task
+	MatchingHeaderParsingFailed                = 4100 // service/matching/physical_task_queue_manager.go:492 - unable to parse header
 	MatchingTaskStoreOperationFailed           = 4201
 	MatchingUserDataFetchFailed                = 4301
 	MatchingUserDataVersionMismatch            = 4302
@@ -606,7 +565,6 @@ const (
 	WorkerHostLookupFailed                                 = 5007
 	WorkerSDKNonRetryableError                             = 5008
 	WorkerHistoryArchivalFailed                            = 5101
-	WorkerVisibilityArchivalFailed                         = 5102
 	WorkerScannerHeartbeatRecoveryFailed                   = 5201
 	WorkerReplicationTasksFetchFailed                      = 5301
 	WorkerReplicationTasksApplyFailed                      = 5302
@@ -616,15 +574,14 @@ const (
 	WorkerDeleteNamespaceChildWorkflowError                = 5401
 
 	// Batcher Operations (5500-5599)
-	WorkerBatchOperationCompletionFailed               = 5501
-	WorkerBatchOperationNamespaceMismatch              = 5502
-	WorkerBatchResetOptionsDeserializationFailed       = 5503
-	WorkerBatchPostResetOperationDeserializationFailed = 5504
-	WorkerBatchHeartbeatRecoveryFailed                 = 5505
-	WorkerBatchWorkflowCountEstimationFailed           = 5506
-	WorkerBatchOperationTaskProcessingFailed           = 5507
-	WorkerBatchWorkflowHistoryReverseReadFailed        = 5508
-	WorkerBatchWorkflowHistoryReadFailed               = 5509
+	WorkerBatchOperationNamespaceMismatch              = 5501
+	WorkerBatchResetOptionsDeserializationFailed       = 5502
+	WorkerBatchPostResetOperationDeserializationFailed = 5503
+	WorkerBatchHeartbeatRecoveryFailed                 = 5504
+	WorkerBatchWorkflowCountEstimationFailed           = 5505
+	WorkerBatchOperationTaskProcessingFailed           = 5506
+	WorkerBatchWorkflowHistoryReverseReadFailed        = 5507
+	WorkerBatchWorkflowHistoryReadFailed               = 5508
 
 	// Worker Deployment Operations (5600-5699)
 	WorkerDeploymentQueryHandlerSetupFailed        = 5601
@@ -635,31 +592,24 @@ const (
 	WorkerDeploymentVersionRegistrationFailed      = 5606
 	WorkerDeploymentVersionPollingFailed           = 5607
 	WorkerDeploymentVersionValidationFailed        = 5608
-	WorkerDeploymentVersionTimeout                 = 5609
 
 	// Scheduler Operations (5700-5799)
-	WorkerSchedulerWorkflowError           = 5701
-	WorkerSchedulerActionExecutionFailed   = 5702
-	WorkerSchedulerPolicyValidationFailed  = 5703
-	WorkerSchedulerTriggerEvaluationFailed = 5704
-	WorkerSchedulerStateTransitionFailed   = 5705
+	WorkerSchedulerActionExecutionFailed   = 5701
+	WorkerSchedulerPolicyValidationFailed  = 5702
+	WorkerSchedulerTriggerEvaluationFailed = 5703
+	WorkerSchedulerStateTransitionFailed   = 5704
 
 	// Scanner Operations (5800-5899)
 	WorkerScannerExecutionTaskProcessingFailed = 5801
 	WorkerScannerHistoryScavengingFailed       = 5802
-	WorkerScannerTaskQueueScavengingFailed     = 5803
-	WorkerScannerBuildIDsScavengingFailed      = 5804
 
 	// Migration Operations (5900-5999)
-	WorkerMigrationActivityExecutionFailed  = 5901
-	WorkerMigrationWorkflowProcessingFailed = 5902
-	WorkerMigrationValidationFailed         = 5903
+	WorkerMigrationActivityExecutionFailed = 5901
 
 	// Delete Namespace Operations (6000-6099)
-	WorkerDeleteNamespaceWorkflowFailed         = 6001
-	WorkerDeleteNamespaceExecutionsFailed       = 6002
-	WorkerDeleteNamespaceReclaimResourcesFailed = 6003
-	WorkerDeleteNamespaceActivitiesFailed       = 6004
+	WorkerDeleteNamespaceExecutionsFailed       = 6001
+	WorkerDeleteNamespaceReclaimResourcesFailed = 6002
+	WorkerDeleteNamespaceActivitiesFailed       = 6003
 
 	// Common Components Range: 7000-7999
 
@@ -670,53 +620,106 @@ const (
 	CommonHistoryArchivalOperationFailed    = 7101
 	CommonVisibilityArchivalOperationFailed = 7102
 	CommonArchivalUploadFailed              = 7103
-	CommonArchivalDownloadFailed            = 7104
 
 	// Tools and Utilities (7200-7299)
-	ToolsCassandraOperationFailed           = 7201
-	ToolsSQLOperationFailed                 = 7202
-	ToolsMigrationOperationFailed           = 7203
-	ToolsCQLClientOperationFailed           = 7204
-	ToolsDatabaseConnectionValidationFailed = 7205
-	ToolsSchemaEmbedOperationFailed         = 7206
+	ToolsCQLClientOperationFailed   = 7201
+	ToolsSchemaEmbedOperationFailed = 7202
 
 	// Component Operations (7300-7399)
 	ComponentNexusOperationHandlerFailed = 7301
 	ComponentCallbackInvocationFailed    = 7302
 	ComponentSchedulerExecutorFailed     = 7303
-	ComponentInitializationFailed        = 7304
 
 	// Infrastructure Operations (7400-7499)
 	InfraServiceLifecycleOperationFailed = 7401
 	InfraMetricsProviderOperationFailed  = 7402
-	InfraDynamicConfigOperationFailed    = 7403
-	InfraTaskSchedulerOperationFailed    = 7404
+	InfraTaskSchedulerOperationFailed    = 7403
 
 	// Persistence Operations (7500-7599)
-	PersistElasticsearchProcessorOperationFailed = 7501
-	PersistVisibilityStoreOperationFailed        = 7502
-	PersistNDCHistoryImporterOperationFailed     = 7503
-	PersistHistoryManagerOperationFailed         = 7504
-	PersistDLQMetricsEmitterOperationFailed      = 7505
+	PersistenceElasticsearchProcessorOperationFailed = 7501
+	PersistenceVisibilityStoreOperationFailed        = 7502
+	PersistenceNDCHistoryImporterOperationFailed     = 7503
+	PersistenceHistoryManagerOperationFailed         = 7504
 
 	// History Service Operations (7800-7899)
-	HistWorkflowTransactionOperationFailed          = 7801
-	HistReplicationTaskProcessorOperationFailed     = 7802
-	HistReplicationTaskExecutorOperationFailed      = 7803
-	HistAPIGetHistoryUtilityOperationFailed         = 7804
-	HistRespondWorkflowTaskCompletedOperationFailed = 7805
+	HistoryWorkflowTransactionOperationFailed          = 7801
+	HistoryReplicationTaskProcessorOperationFailed     = 7802
+	HistoryReplicationTaskExecutorOperationFailed      = 7803
+	HistoryAPIGetHistoryUtilityOperationFailed         = 7804
+	HistoryRespondWorkflowTaskCompletedOperationFailed = 7805
 
 	// Membership Operations (7900-7999)
 	MemberRingpopTestClusterOperationFailed = 7901
 	MemberRingpopMonitorOperationFailed     = 7902
 
 	// Namespace Operations (8000-8099)
-	NSReplicationTaskExecutorOperationFailed = 8001
+
+	// Generated Error Codes - Each logging line gets a unique error code
+	// Component Service - Generated Error Codes (10 codes)
+	ComponentCallbacksError                        = 7300 // components/callbacks/fx.go:59
+	ComponentCallbacksFailed                       = 7306 // components/callbacks/hsm_invocation.go:86 - Callback request failed
+	ComponentNexusOperationsFailed                 = 7307 // components/nexusoperations/executors.go:261 - Nexus StartOperation request failed
+	ComponentNexusOperationsError                  = 7308 // components/nexusoperations/executors.go:354
+	ComponentNexusOperationsError2                 = 7309 // components/nexusoperations/executors.go:356
+	ComponentNexusOperationsInvalidOperationFailed = 7310 // components/nexusoperations/executors.go:367 - invalid link data type: %q
+	ComponentNexusOperationsFailed2                = 7311 // components/nexusoperations/executors.go:592 - Nexus CancelOperation request failed
+	ComponentsSchedulerOperationFailed             = 7316 // components/scheduler/generator_executors.go:66 - Time went backwards
+	ComponentSchedulerOperationFailed2             = 7317 // components/scheduler/spec_processor.go:105 - Schedule missed catchup window
+	ComponentSchedulerInvalidOperationFailed       = 7318 // components/scheduler/spec_processor.go:152 - Invalid schedule
+
+	// Worker Service - Generated Error Codes (114 codes)
+	WorkerWorkerBatcherFailed = 5009 // service/worker/batcher/activities.go:238 - Failed to complete batch operation
+
+	// Common Service - Generated Error Codes (192 codes)
+	CommonArchiverFilestoreError  = 7000 // common/archiver/filestore/history_archiver.go:122
+	CommonArchiverFilestoreError2 = 7002 // common/archiver/filestore/history_archiver.go:127
+	CommonArchiverFilestoreError4 = 7004 // common/archiver/filestore/history_archiver.go:150
+	CommonArchiverFilestoreError5 = 7005 // common/archiver/filestore/history_archiver.go:152
+	CommonArchiverFilestoreError6 = 7006 // common/archiver/filestore/history_archiver.go:158
+	CommonArchiverFilestoreError7 = 7007 // common/archiver/filestore/history_archiver.go:168
+	CommonArchiverFilestoreError8 = 7008 // common/archiver/filestore/history_archiver.go:174
+	CommonArchiverFilestoreError9 = 7009 // common/archiver/filestore/history_archiver.go:180
+
+	// Client Service - Generated Error Codes (10 codes)
+	ClientClientHistoryError  = 8003 // client/history/caching_redirector.go:224 - Error adding listener
+	ClientClientHistoryError2 = 8004 // client/history/caching_redirector.go:228 - Error removing listener
+	ClientClientHistoryFailed = 8005 // client/history/client.go:148 - Failed to get replication tasks from client
+	ClientClientHistoryError3 = 8006 // client/history/metric_client.go:79 - history client encountered error
+
+	// Tools Service - Generated Error Codes (32 codes)
+	ToolsCassandraOperationFailed       = 7207 // tools/cassandra/handler.go:31 - Unable to read config.
+	ToolsCassandraOperationFailed2      = 7208 // tools/cassandra/handler.go:36 - Unable to establish CQL session.
+	ToolsCassandraOperationFailed3      = 7209 // tools/cassandra/handler.go:41 - Unable to setup CQL schema.
+	ToolsCassandraOperationFailed4      = 7210 // tools/cassandra/handler.go:52 - Unable to read config.
+	ToolsCassandraOperationFailed5      = 7211 // tools/cassandra/handler.go:57 - Unable to establish CQL session.
+	ToolsCassandraUpdateOperationFailed = 7212 // tools/cassandra/handler.go:62 - Unable to update CQL schema.
+	ToolsCassandraOperationFailed6      = 7213 // tools/cassandra/handler.go:71 - Unable to read config.
+	ToolsCassandraOperationFailed7      = 7214 // tools/cassandra/handler.go:77 - Unable to read config.
+	ToolsCassandraCreateOperationFailed = 7215 // tools/cassandra/handler.go:82 - Unable to create keyspace.
+	ToolsCassandraOperationFailed8      = 7216 // tools/cassandra/handler.go:91 - Unable to read config.
+	ToolsCassandraOperationFailed9      = 7217 // tools/cassandra/handler.go:97 - Unable to read config.
+	ToolsCassandraOperationFailed10     = 7218 // tools/cassandra/handler.go:102 - Unable to drop keyspace.
+	ToolsCassandraOperationFailed11     = 7219 // tools/cassandra/handler.go:111 - Unable to read config.
+	ToolsCassandraOperationFailed12     = 7220 // tools/cassandra/handler.go:119 - Unable to establish CQL session.
+	ToolsCassandraError                 = 7221 // tools/cassandra/setup_task_tests.go:18 - Error creating CQLClient
+	ToolsCassandraError2                = 7222 // tools/cassandra/update_task_tests.go:16 - Error creating CQLClient
+	ToolsSqlClitestError                = 7223 // tools/sql/clitest/conn_tests.go:57 - error creating sql conn
+	ToolsSqlClitestError2               = 7224 // tools/sql/clitest/update_task_tests.go:51 - Error creating CQLClient
+	ToolsSqlOperationFailed             = 7225 // tools/sql/handler.go:23 - Unable to read config.
+	ToolsSqlConnectOperationFailed      = 7226 // tools/sql/handler.go:28 - Unable to connect to SQL database.
+	ToolsSqlOperationFailed2            = 7227 // tools/sql/handler.go:33 - Unable to setup SQL schema.
+	ToolsSqlOperationFailed3            = 7228 // tools/sql/handler.go:44 - Unable to read config.
+	ToolsSqlConnectOperationFailed2     = 7229 // tools/sql/handler.go:49 - Unable to connect to SQL database.
+	ToolsSqlUpdateOperationFailed       = 7230 // tools/sql/handler.go:54 - Unable to update SQL schema.
+	ToolsSqlOperationFailed4            = 7231 // tools/sql/handler.go:64 - Unable to read config.
+	ToolsSqlCreateOperationFailed       = 7232 // tools/sql/handler.go:70 - Unable to create SQL database.
+	ToolsSqlOperationFailed5            = 7233 // tools/sql/handler.go:91 - Unable to read config.
+	ToolsSqlOperationFailed6            = 7234 // tools/sql/handler.go:97 - Unable to drop SQL database.
+	ToolsTdbgFailed                     = 7235 // tools/tdbg/factory.go:117 - Failed to create connection
+	ToolsTdbgFailed2                    = 7236 // tools/tdbg/factory.go:142 - Failed to load server CA certificate
+	ToolsTdbgFailed3                    = 7237 // tools/tdbg/factory.go:150 - Failed to load client certificate
 
 	// Test and Development Operations (7600-7699)
-	TestDataConverterOperationFailed = 7601
-	TestExecutionFailure             = 7602
-	TestDevelopmentUtilityFailed     = 7603
 
 	// Log Migration Operations (7700-7799)
 	CommonLogMigrationOperationFailed = 7701
@@ -727,30 +730,26 @@ const (
 	CommonTaskSchedulerOperationFailed            = 8103
 	CommonFinalizerOperationFailed                = 8104
 	CommonSoftAssertOperationFailed               = 8105
-	CommonNexusEndpointRegistryOperationFailed    = 8106
-	CommonXDCCacheOperationFailed                 = 8107
-	XDCCacheEventsTruncated                       = 8122
-	CommonVisibilityManagerMetricsOperationFailed = 8108
-	CommonPersistenceMetricClientOperationFailed  = 8109
-	CommonNexusEndpointManagerOperationFailed     = 8110
-	CommonNamespaceRegistryOperationFailed        = 8111
-	CommonDLQMessageHandlerOperationFailed        = 8112
-	CommonUtilityOperationFailed                  = 8113
-	CommonFinalizerTimeout                        = 8114
-	DeadlockDetected                              = 8115
-	DeadlockProfileNotFound                       = 8116
-	DeadlockProfileFailed                         = 8117
-	PersistenceDLQListFailed                      = 8118
-	PersistenceDLQProcessQueueNameFailed          = 8119
-	PersistenceDLQCategoryNotFound                = 8120
-	PersistenceDLQHistoryServiceLookupFailed      = 8121
+	CommonXDCCacheOperationFailed                 = 8106
+	CommonVisibilityManagerMetricsOperationFailed = 8107
+	CommonPersistenceMetricClientOperationFailed  = 8108
+	CommonNexusEndpointManagerOperationFailed     = 8109
+	CommonNamespaceRegistryOperationFailed        = 8110
+	CommonUtilityOperationFailed                  = 8111
+	CommonFinalizerTimeout                        = 8112
+	DeadlockDetected                              = 8113
+	DeadlockProfileNotFound                       = 8114
+	DeadlockProfileFailed                         = 8115
+	PersistenceDLQListFailed                      = 8116
+	PersistenceDLQProcessQueueNameFailed          = 8117
+	PersistenceDLQCategoryNotFound                = 8118
+	PersistenceDLQHistoryServiceLookupFailed      = 8119
+	XDCCacheEventsTruncated                       = 8120
 
 	// Schema and Embedding (8200-8299)
 	SchemaEmbedOperationFailed = 8201
 
 	// Additional Archival (8300-8399)
-	ArchiverS3VisibilityOperationFailed = 8301
-	ArchiverAdditionalOperationFailed   = 8302
 
 	// Additional History Service Operations (8400-8499)
 	HistoryTaskPriorityUnknownKey      = 8401
@@ -815,23 +814,20 @@ const (
 	HistoryQueueRateLimiterConfiguration   = 9120
 	HistoryQueueTaskRetrieveFailed         = 9121
 	HistorySchedulerCreationFailed         = 9122
-	ReplicationTaskReaderError             = 9123
-	StreamCloseError                       = 9124
-	ReplicationAckLevelUpdateFailed        = 9125
-	ReplicationTaskSaveFailed              = 9126
-	HistReplicationTaskConversionFailed    = 9127
-	ReplicationServiceError                = 9128
-	RateLimiterWaitFailed                  = 9129
-	VersionHistoryGetFailed                = 9130
-	HistoryWorkflowSizeConstraintViolation = 9131
-	MatchingPersistentStoreFailure         = 9132
-	ReplicationTaskFetchFailed             = 9133
-	HistReplicationCleanupFailed           = 9134
-	HistReplicationDLQOperationFailed      = 9135
-	TaskQueueDeleteError                   = 9136
-	ScavengerDeleteHandlerError            = 9137
-	TaskQueueListError                     = 9138
-	HistorySyncWorkflowStateRetrieveFailed = 9139
-	HistorySyncWorkflowStateUpdateFailed   = 9140
-	WorkflowStartError                     = 9141
+	StreamCloseError                       = 9123
+	ReplicationTaskSaveFailed              = 9124
+	HistoryReplicationTaskConversionFailed = 9125
+	RateLimiterWaitFailed                  = 9126
+	VersionHistoryGetFailed                = 9127
+	HistoryWorkflowSizeConstraintViolation = 9128
+	MatchingPersistentStoreFailure         = 9129
+	ReplicationTaskFetchFailed             = 9130
+	HistoryReplicationCleanupFailed        = 9131
+	HistoryReplicationDLQOperationFailed   = 9132
+	TaskQueueDeleteError                   = 9133
+	ScavengerDeleteHandlerError            = 9134
+	TaskQueueListError                     = 9135
+	HistorySyncWorkflowStateRetrieveFailed = 9136
+	HistorySyncWorkflowStateUpdateFailed   = 9137
+	WorkflowStartError                     = 9138
 )

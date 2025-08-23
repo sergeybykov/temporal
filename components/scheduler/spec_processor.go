@@ -5,6 +5,7 @@ import (
 
 	enumspb "go.temporal.io/api/enums/v1"
 	schedulespb "go.temporal.io/server/api/schedule/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -102,7 +103,7 @@ func (s SpecProcessorImpl) ProcessTimeRange(
 		}
 
 		if !manual && end.Sub(next.Next) > catchupWindow {
-			s.Logger.Warn("Schedule missed catchup window",
+			log.WarnWithCode(s.Logger, errorcode.ComponentSchedulerOperationFailed2, "Schedule missed catchup window",
 				tag.NewTimeTag("now", end),
 				tag.NewTimeTag("time", next.Next))
 			s.MetricsHandler.Counter(metrics.ScheduleMissedCatchupWindow.Name()).Record(1)
@@ -149,7 +150,7 @@ func catchupWindow(s Scheduler, tweakables Tweakables) time.Duration {
 func (s SpecProcessorImpl) getNextTime(scheduler Scheduler, after time.Time) (scheduler1.GetNextTimeResult, error) {
 	spec, err := scheduler.getCompiledSpec(s.SpecBuilder)
 	if err != nil {
-		s.Logger.Error("Invalid schedule", tag.Error(err))
+		log.ErrorWithCode(s.Logger, errorcode.ComponentSchedulerInvalidOperationFailed, "Invalid schedule", err)
 		return scheduler1.GetNextTimeResult{}, err
 	}
 

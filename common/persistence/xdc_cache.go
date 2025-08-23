@@ -11,8 +11,8 @@ import (
 	workflowspb "go.temporal.io/server/api/workflow/v1"
 	"go.temporal.io/server/common/cache"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/persistence/serialization"
 	"go.temporal.io/server/common/persistence/versionhistory"
 )
@@ -116,13 +116,13 @@ func (e *XDCCacheImpl) Put(
 				var err error
 				events[i], err = e.serializer.DeserializeEvents(blob)
 				if err != nil {
-					e.logger.Error("Error deserializing events", tag.Error(err))
+					log.ErrorWithCode(e.logger, errorcode.CommonXDCCacheOperationFailed, "Error deserializing events", err)
 					return nil
 				}
 			}
 			return events
 		}
-		e.logger.Error(fmt.Sprintf("Putting duplicate key in XDC cache: wf-key: %v, existing event blobs: %v, new event blobs: %v", key.WorkflowKey, deserializeBlobs(existingValue.EventBlobs), deserializeBlobs(value.EventBlobs)))
+		log.ErrorWithCode(e.logger, errorcode.CommonXDCCacheOperationFailed, fmt.Sprintf("Putting duplicate key in XDC cache: wf-key: %v, existing event blobs: %v, new event blobs: %v", key.WorkflowKey, deserializeBlobs(existingValue.EventBlobs), deserializeBlobs(value.EventBlobs)), nil)
 	}
 	e.cache.Put(key, value)
 }

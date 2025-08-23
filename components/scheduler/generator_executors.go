@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/server/common/errorcode"
+
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -61,16 +63,14 @@ func (e generatorTaskExecutor) executeBufferTask(env hsm.Environment, node *hsm.
 	t1 := generator.LastProcessedTime.AsTime()
 	t2 := env.Now().UTC()
 	if t2.Before(t1) {
-		logger.Warn("Time went backwards",
-			tag.NewStringerTag("time", t1),
-			tag.NewStringerTag("time", t2))
+		log.WarnWithCode(logger, errorcode.ComponentsSchedulerOperationFailed, "Time went backwards", tag.NewStringerTag("time", t1), tag.NewStringerTag("time", t2))
 		t2 = t1
 	}
 
 	res, err := e.SpecProcessor.ProcessTimeRange(scheduler, t1, t2, scheduler.overlapPolicy(), "", false, nil)
 	if err != nil {
 		// An error here should be impossible, send to the DLQ.
-		logger.Error("Error processing time range", tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.ComponentSchedulerExecutorFailed, "Error processing time range", err)
 
 		return fmt.Errorf(
 			"%w: %w",

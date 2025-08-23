@@ -5,8 +5,8 @@ import (
 
 	"github.com/gocql/gocql"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	p "go.temporal.io/server/common/persistence"
 	commongocql "go.temporal.io/server/common/persistence/nosql/nosqlplugin/cassandra/gocql"
@@ -41,7 +41,7 @@ func NewFactory(
 		metricsHandler,
 	)
 	if err != nil {
-		logger.Fatal("unable to initialize cassandra session", tag.Error(err))
+		log.FatalWithCode(logger, errorcode.CommonPersistenceMetricClientOperationFailed, "unable to initialize cassandra session", err)
 	}
 	return NewFactoryFromSession(cfg, clusterName, logger, session)
 }

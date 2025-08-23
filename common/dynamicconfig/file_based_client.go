@@ -14,6 +14,7 @@ import (
 
 	enumspb "go.temporal.io/api/enums/v1"
 	enumsspb "go.temporal.io/server/api/enums/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	expmaps "golang.org/x/exp/maps"
@@ -136,7 +137,7 @@ func (fc *fileBasedClient) init() error {
 			case <-ticker.C:
 				err := fc.Update()
 				if err != nil {
-					fc.logger.Error("Unable to update dynamic config.", tag.Error(err))
+					log.ErrorWithCode(fc.logger, errorcode.CommonDynamicConfigOperationFailed, "Unable to update dynamic config.", err)
 				}
 			case <-fc.doneCh:
 				ticker.Stop()
@@ -167,10 +168,10 @@ func (fc *fileBasedClient) Update() error {
 
 	newValues, lr := loadFile(contents)
 	for _, e := range lr.Errors {
-		fc.logger.Warn("dynamic config error", tag.Error(e))
+		log.WarnWithCode(fc.logger, errorcode.CommonDynamicConfigOperationFailed, "dynamic config error", tag.Error(e))
 	}
 	for _, w := range lr.Warnings {
-		fc.logger.Warn("dynamic config warning", tag.Error(w))
+		log.WarnWithCode(fc.logger, errorcode.CommonDynamicConfigOperationFailed, "dynamic config warning", tag.Error(w))
 	}
 	if len(lr.Errors) > 0 {
 		return fmt.Errorf("loading dynamic config failed: %d errors, %d warnings",

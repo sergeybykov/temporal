@@ -15,10 +15,10 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/goro"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/persistence"
 	"go.temporal.io/server/common/pingable"
@@ -212,7 +212,7 @@ func (m *metadataImpl) Start() {
 	)
 	err := m.refreshClusterMetadata(ctx)
 	if err != nil {
-		m.logger.Fatal("Unable to initialize cluster metadata cache", tag.Error(err))
+		log.FatalWithCode(m.logger, errorcode.CommonXDCCacheOperationFailed, "Unable to initialize cluster metadata cache", err)
 	}
 	m.refresher = goro.NewHandle(ctx).Go(m.refreshLoop)
 }
@@ -349,7 +349,7 @@ func (m *metadataImpl) ClusterNameForFailoverVersion(isGlobalNamespace bool, fai
 	defer m.clusterLock.RUnlock()
 	clusterName, ok := m.versionToClusterName[initialFailoverVersion]
 	if !ok {
-		m.logger.Warn(fmt.Sprintf(
+		log.WarnWithCode(m.logger, errorcode.CommonXDCCacheOperationFailed, fmt.Sprintf(
 			"Unknown initial failover version %v with given cluster initial failover version map: %v and failover version increment %v.",
 			initialFailoverVersion,
 			m.clusterInfo,
@@ -396,7 +396,7 @@ func (m *metadataImpl) refreshLoop(ctx context.Context) error {
 			return nil
 		case <-timer.C:
 			for err := m.refreshClusterMetadata(ctx); err != nil; err = m.refreshClusterMetadata(ctx) {
-				m.logger.Error("Error refreshing remote cluster metadata", tag.Error(err))
+				log.ErrorWithCode(m.logger, errorcode.InfraClusterMetadataRefreshFailed, "Error refreshing remote cluster metadata", err)
 				refreshTimer := time.NewTimer(m.refreshDuration() / 2)
 
 				select {

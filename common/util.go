@@ -19,6 +19,7 @@ import (
 	"go.temporal.io/server/api/matchingservice/v1"
 	workflowspb "go.temporal.io/server/api/workflow/v1"
 	"go.temporal.io/server/common/backoff"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -591,7 +592,7 @@ func CheckEventBlobSizeLimit(
 	metrics.EventBlobSize.With(metricsHandler).Record(int64(actualSize))
 	if actualSize > warnLimit {
 		if logger != nil {
-			logger.Warn("Blob data size exceeds the warning limit.",
+			log.WarnWithCode(logger, errorcode.CommonUtilityOperationFailed, "Blob data size exceeds the warning limit.",
 				tag.WorkflowNamespace(namespace),
 				tag.WorkflowID(workflowID),
 				tag.WorkflowRunID(runID),
@@ -622,12 +623,12 @@ func ValidateLongPollContextTimeout(
 	timeout := time.Until(deadline)
 	if timeout < MinLongPollTimeout {
 		err := ErrContextTimeoutTooShort
-		logger.Error("Context timeout is too short for long poll API.",
-			tag.WorkflowHandlerName(handlerName), tag.Error(err), tag.WorkflowPollContextTimeout(timeout))
+		log.ErrorWithCode(logger, errorcode.CommonUtilityOperationFailed, "Context timeout is too short for long poll API.",
+			err, tag.WorkflowHandlerName(handlerName), tag.WorkflowPollContextTimeout(timeout))
 		return err
 	}
 	if timeout < CriticalLongPollTimeout {
-		logger.Warn("Context timeout is lower than critical value for long poll API.",
+		log.WarnWithCode(logger, errorcode.CommonUtilityOperationFailed, "Context timeout is lower than critical value for long poll API.",
 			tag.WorkflowHandlerName(handlerName), tag.WorkflowPollContextTimeout(timeout))
 	}
 	return nil
@@ -643,8 +644,8 @@ func ValidateLongPollContextTimeoutIsSet(
 	deadline, ok := ctx.Deadline()
 	if !ok {
 		err := ErrContextTimeoutNotSet
-		logger.Error("Context timeout not set for long poll API.",
-			tag.WorkflowHandlerName(handlerName), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonUtilityOperationFailed, "Context timeout not set for long poll API.",
+			err, tag.WorkflowHandlerName(handlerName))
 		return deadline, err
 	}
 	return deadline, nil

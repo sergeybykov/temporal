@@ -9,6 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/primitives"
 )
@@ -55,10 +56,10 @@ func NewDefaultJWTClaimMapper(provider TokenKeyProvider, cfg *config.Authorizati
 			if namespaceIndex != 0 && roleIndex != 0 {
 				permissionsRegex = r
 			} else {
-				logger.Warn("permissions regex does not have namespace or role named group")
+				log.WarnWithCode(logger, errorcode.CommonNamespaceRegistryOperationFailed, "permissions regex does not have namespace or role named group")
 			}
 		} else {
-			logger.Warn(fmt.Sprintf("failed to compile permissions regex '%s': %v", cfg.PermissionsRegex, err))
+			log.WarnWithCode(logger, errorcode.CommonNamespaceRegistryOperationFailed, fmt.Sprintf("failed to compile permissions regex '%s': %v", cfg.PermissionsRegex, err))
 		}
 	}
 	return &defaultJWTClaimMapper{
@@ -113,21 +114,21 @@ func (a *defaultJWTClaimMapper) extractPermissions(permissions []interface{}, cl
 	for _, permission := range permissions {
 		p, ok := permission.(string)
 		if !ok {
-			a.logger.Warn(fmt.Sprintf("ignoring permission that is not a string: %v", permission))
+			log.WarnWithCode(a.logger, errorcode.CommonNamespaceRegistryOperationFailed, fmt.Sprintf("ignoring permission that is not a string: %v", permission))
 			continue
 		}
 		var parts []string
 		if a.permissionsRegex != nil {
 			match := a.permissionsRegex.FindStringSubmatch(p)
 			if len(match) == 0 {
-				a.logger.Warn(fmt.Sprintf("ignoring permission not matching pattern: %v", permission))
+				log.WarnWithCode(a.logger, errorcode.CommonNamespaceRegistryOperationFailed, fmt.Sprintf("ignoring permission not matching pattern: %v", permission))
 				continue
 			}
 			parts = []string{match[a.matchNamespaceIndex], match[a.matchRoleIndex]}
 		} else {
 			parts = strings.SplitN(p, ":", 2)
 			if len(parts) != 2 {
-				a.logger.Warn(fmt.Sprintf("ignoring permission in unexpected format: %v", permission))
+				log.WarnWithCode(a.logger, errorcode.CommonNamespaceRegistryOperationFailed, fmt.Sprintf("ignoring permission in unexpected format: %v", permission))
 				continue
 			}
 		}

@@ -13,6 +13,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/gocql/gocql"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/metrics"
 	p "go.temporal.io/server/common/persistence"
@@ -128,7 +129,7 @@ func ApplySchemaUpdate(t *testing.T, cfg *config.Cassandra, schemaFile string, l
 
 	for _, stmt := range statements {
 		if err = session.Query(stmt).Exec(); err != nil {
-			logger.Error(fmt.Sprintf("Unable to execute statement from file: %s\n  %s", schemaFile, stmt))
+			log.ErrorWithCode(logger, errorcode.ToolsSchemaEmbedOperationFailed, fmt.Sprintf("Unable to execute statement from file: %s\n  %s", schemaFile, stmt), nil)
 			t.Fatal(err)
 		}
 	}
@@ -176,11 +177,11 @@ func GetSchemaFiles(t *testing.T, schemaDir string, logger log.Logger) []string 
 	versionDirNames := make([]string, 0, len(subDirs))
 	for _, subDir := range subDirs {
 		if !subDir.IsDir() {
-			logger.Warn(fmt.Sprintf("Skipping non-directory file: '%s'", subDir.Name()))
+			log.WarnWithCode(logger, errorcode.CommonPersistenceMetricClientOperationFailed, fmt.Sprintf("Skipping non-directory file: '%s'", subDir.Name()))
 			continue
 		}
 		if _, ve := semver.ParseTolerant(subDir.Name()); ve != nil {
-			logger.Warn(fmt.Sprintf("Skipping directory which is not a valid semver: '%s'", subDir.Name()))
+			log.WarnWithCode(logger, errorcode.CommonPersistenceMetricClientOperationFailed, fmt.Sprintf("Skipping directory which is not a valid semver: '%s'", subDir.Name()))
 		}
 		versionDirNames = append(versionDirNames, subDir.Name())
 	}

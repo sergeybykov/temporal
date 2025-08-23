@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/api"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -421,7 +422,7 @@ func (ti *TelemetryInterceptor) logError(
 	logTags = append(logTags, tag.NewStringerTag("grpc_code", statusCode))
 	logTags = append(logTags, ti.workflowTags.Extract(req, fullMethod)...)
 
-	ti.logger.Error("service failures", append(logTags, tag.Error(err))...)
+	log.ErrorWithCode(ti.logger, errorcode.CommonUtilityOperationFailed, "service failures", err, logTags...)
 }
 
 func recordErrorMetrics(metricsHandler metrics.Handler, err error, isExpectedError bool) {
@@ -515,7 +516,7 @@ func GetMetricsHandlerFromContext(
 ) metrics.Handler {
 	handler, ok := ctx.Value(metricsCtxKey).(metrics.Handler)
 	if !ok {
-		logger.Error("unable to get metrics scope")
+		log.ErrorWithCode(logger, errorcode.CommonMetricsOperationFailed, "unable to get metrics scope", nil)
 		return metrics.NoopMetricsHandler
 	}
 	return handler

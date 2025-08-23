@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 )
@@ -82,7 +83,7 @@ func (e *statsdExporter) Export(ctx context.Context, rm *metricdata.ResourceMetr
 	for _, sm := range rm.ScopeMetrics {
 		for _, m := range sm.Metrics {
 			if err := e.exportMetric(m); err != nil {
-				e.logger.Error("Failed to export metric to StatsD", tag.Error(err), tag.NewStringTag("metric_name", m.Name))
+				log.ErrorWithCode(e.logger, errorcode.CommonMetricsOperationFailed, "Failed to export metric to StatsD", err, tag.NewStringTag("metric_name", m.Name))
 			}
 		}
 	}
@@ -124,7 +125,7 @@ func (e *statsdExporter) exportMetric(m metricdata.Metrics) error {
 	case metricdata.Histogram[float64]:
 		return e.exportHistogramFloat64(m.Name, data)
 	default:
-		e.logger.Warn("Unsupported metric type for StatsD export", tag.NewStringTag("metric_name", m.Name))
+		log.WarnWithCode(e.logger, errorcode.CommonMetricsOperationFailed, "Unsupported metric type for StatsD export", tag.NewStringTag("metric_name", m.Name))
 		return nil
 	}
 }

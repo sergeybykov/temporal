@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"go.temporal.io/server/common/api"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/tasktoken"
@@ -56,7 +57,7 @@ func (wt *WorkflowTags) fromTaskToken(taskTokenBytes []byte) []tag.Tag {
 	}
 	taskToken, err := wt.serializer.Deserialize(taskTokenBytes)
 	if err != nil {
-		wt.logger.Warn("unable to deserialize task token while getting workflow tags", tag.Error(err))
+		log.WarnWithCode(wt.logger, errorcode.CommonNexusOperationFailed, "unable to deserialize task token while getting workflow tags", tag.Error(err))
 		return nil
 	}
 	return []tag.Tag{tag.WorkflowID(taskToken.WorkflowId), tag.WorkflowRunID(taskToken.RunId)}

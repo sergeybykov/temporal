@@ -13,6 +13,7 @@ import (
 	"go.temporal.io/server/common/archiver"
 	"go.temporal.io/server/common/archiver/gcloud/connector"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -92,21 +93,21 @@ func (v *visibilityArchiver) Archive(ctx context.Context, URI archiver.URI, requ
 
 	if err := v.ValidateURI(URI); err != nil {
 		if isRetryableError(err) {
-			logger.Error(archiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
+			log.ErrorWithCode(logger, errorcode.CommonVisibilityArchivalOperationFailed, archiver.ArchiveTransientErrorMsg, err, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI))
 			return err
 		}
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonVisibilityArchivalOperationFailed, archiver.ArchiveNonRetryableErrorMsg, err, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI))
 		return err
 	}
 
 	if err := archiver.ValidateVisibilityArchivalRequest(request); err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonVisibilityArchivalOperationFailed, archiver.ArchiveNonRetryableErrorMsg, err, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest))
 		return err
 	}
 
 	encodedVisibilityRecord, err := encode(request)
 	if err != nil {
-		logger.Error(archiver.ArchiveNonRetryableErrorMsg, tag.ArchivalArchiveFailReason(errEncodeVisibilityRecord), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonVisibilityArchivalOperationFailed, archiver.ArchiveNonRetryableErrorMsg, err, tag.ArchivalArchiveFailReason(errEncodeVisibilityRecord))
 		return err
 	}
 
@@ -114,13 +115,13 @@ func (v *visibilityArchiver) Archive(ctx context.Context, URI archiver.URI, requ
 	// This format allows the archiver to sort all records without reading the file contents
 	filename := constructVisibilityFilename(request.GetNamespaceId(), request.WorkflowTypeName, request.GetWorkflowId(), request.GetRunId(), indexKeyCloseTimeout, request.CloseTime.AsTime())
 	if err := v.gcloudStorage.Upload(ctx, URI, filename, encodedVisibilityRecord); err != nil {
-		logger.Error(archiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonVisibilityArchivalOperationFailed, archiver.ArchiveTransientErrorMsg, err, tag.ArchivalArchiveFailReason(errWriteFile))
 		return errRetryable
 	}
 
 	filename = constructVisibilityFilename(request.GetNamespaceId(), request.WorkflowTypeName, request.GetWorkflowId(), request.GetRunId(), indexKeyStartTimeout, request.StartTime.AsTime())
 	if err := v.gcloudStorage.Upload(ctx, URI, filename, encodedVisibilityRecord); err != nil {
-		logger.Error(archiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.CommonVisibilityArchivalOperationFailed, archiver.ArchiveTransientErrorMsg, err, tag.ArchivalArchiveFailReason(errWriteFile))
 		return errRetryable
 	}
 

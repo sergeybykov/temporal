@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	cclock "go.temporal.io/server/common/clock"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/goro"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -92,7 +93,7 @@ func (f *Finalizer) Run(
 
 	f.mu.Lock()
 	if f.finalized {
-		f.logger.Warn("finalizer skipped: called more than once")
+		log.WarnWithCode(f.logger, errorcode.CommonFinalizerOperationFailed, "finalizer skipped: called more than once")
 		f.mu.Unlock()
 		return 0
 	}
@@ -155,7 +156,7 @@ func (f *Finalizer) Run(
 			}
 
 		case <-ctx.Done():
-			f.logger.Error("finalizer timed out",
+			log.ErrorWithCode(f.logger, errorcode.CommonFinalizerTimeout, "finalizer timed out", nil,
 				tag.NewInt("completed", completedCallbacks),
 				tag.NewInt("unfinished", totalCount-completedCallbacks))
 			return completedCallbacks

@@ -9,6 +9,7 @@ import (
 	"github.com/temporalio/ringpop-go"
 	"github.com/temporalio/tchannel-go"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/membership"
@@ -62,19 +63,19 @@ func newTestCluster(
 		var err error
 		cluster.channels[i], err = tchannel.NewChannel(ringPopApp, nil)
 		if err != nil {
-			logger.Error("Failed to create tchannel", tag.Error(err))
+			log.ErrorWithCode(logger, errorcode.MemberRingpopTestClusterOperationFailed, "Failed to create tchannel", err)
 			return nil
 		}
 		listenAddr := listenIPAddr + ":0"
 		err = cluster.channels[i].ListenAndServe(listenAddr)
 		if err != nil {
-			logger.Error("tchannel listen failed", tag.Error(err))
+			log.ErrorWithCode(logger, errorcode.MemberRingpopTestClusterOperationFailed, "tchannel listen failed", err)
 			return nil
 		}
 		cluster.hostUUIDs[i] = uuid.New()
 		cluster.hostAddrs[i], err = buildBroadcastHostPort(cluster.channels[i].PeerInfo(), broadcastAddress)
 		if err != nil {
-			logger.Error("Failed to build broadcast hostport", tag.Error(err))
+			log.ErrorWithCode(logger, errorcode.MemberRingpopTestClusterOperationFailed, "Failed to build broadcast hostport", err)
 			return nil
 		}
 		cluster.hostInfoList[i] = newHostInfo(cluster.hostAddrs[i], nil)
@@ -88,7 +89,7 @@ func newTestCluster(
 
 	seedAddress, seedPort, err := splitHostPortTyped(cluster.seedNode)
 	if err != nil {
-		logger.Error("unable to split host port", tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.MemberRingpopTestClusterOperationFailed, "unable to split host port", err)
 		return nil
 	}
 	seedMember := &persistence.ClusterMember{
@@ -130,7 +131,7 @@ func newTestCluster(
 
 		ringPop, err := ringpop.New(ringPopApp, ringpop.Channel(cluster.channels[i]), ringpop.AddressResolverFunc(resolver))
 		if err != nil {
-			logger.Error("failed to create ringpop instance", tag.Error(err))
+			log.ErrorWithCode(logger, errorcode.MemberRingpopTestClusterOperationFailed, "failed to create ringpop instance", err)
 			return nil
 		}
 		_, port, _ := splitHostPortTyped(cluster.hostAddrs[i])

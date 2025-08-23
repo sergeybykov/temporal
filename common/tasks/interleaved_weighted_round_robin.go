@@ -9,6 +9,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 )
 
@@ -132,7 +133,7 @@ func (s *InterleavedWeightedRoundRobinScheduler[T, K]) Stop() {
 	s.abortTasks()
 
 	if success := common.AwaitWaitGroup(&s.shutdownWG, time.Minute); !success {
-		s.logger.Warn("interleaved weighted round robin task scheduler timed out on shutdown.")
+		log.WarnWithCode(s.logger, errorcode.CommonTaskSchedulerOperationFailed, "interleaved weighted round robin task scheduler timed out on shutdown.")
 	}
 	s.logger.Info("interleaved weighted round robin task scheduler stopped")
 }

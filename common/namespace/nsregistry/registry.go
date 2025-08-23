@@ -12,10 +12,10 @@ import (
 	"go.temporal.io/server/common/cache"
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/goro"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/persistence"
@@ -170,7 +170,7 @@ func (r *registry) Start() {
 
 	err := r.refreshNamespaces(ctx)
 	if err != nil {
-		r.logger.Fatal("Unable to initialize namespace registry", tag.Error(err))
+		log.FatalWithCode(r.logger, errorcode.CommonNamespaceRegistryOperationFailed, "Unable to initialize namespace registry", err)
 	}
 	r.refresher = goro.NewHandle(ctx).Go(r.refreshLoop)
 }
@@ -320,7 +320,7 @@ func (r *registry) refreshLoop(ctx context.Context) error {
 		case <-timer.C:
 			err := r.refreshNamespaces(ctx)
 			for err != nil {
-				r.logger.Error("Error refreshing namespace cache", tag.Error(err))
+				log.ErrorWithCode(r.logger, errorcode.CommonNamespaceRegistryOperationFailed, "Error refreshing namespace cache", err)
 				timerFailureRetry := time.NewTimer(CacheRefreshFailureRetryInterval)
 				select {
 				case <-ctx.Done():

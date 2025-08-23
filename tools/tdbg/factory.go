@@ -17,8 +17,8 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/server/api/adminservice/v1"
 	"go.temporal.io/server/common/auth"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.uber.org/multierr"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -114,7 +114,7 @@ func (b *clientFactory) createGRPCConnection(c *cli.Context) (*grpc.ClientConn, 
 
 	connection, err := grpc.NewClient(frontendAddress, dialOpts...)
 	if err != nil {
-		b.logger.Fatal("Failed to create connection", tag.Error(err))
+		log.FatalWithCode(b.logger, errorcode.ToolsTdbgFailed, "Failed to create connection", err)
 		return nil, err
 	}
 	return connection, nil
@@ -139,7 +139,7 @@ func (b *clientFactory) createTLSConfig(c *cli.Context) (*tls.Config, error) {
 	if caPath != "" {
 		caCertPool, err := fetchCACert(caPath)
 		if err != nil {
-			b.logger.Fatal("Failed to load server CA certificate", tag.Error(err))
+			log.FatalWithCode(b.logger, errorcode.ToolsTdbgFailed2, "Failed to load server CA certificate", err)
 			return nil, err
 		}
 		caPool = caCertPool
@@ -147,7 +147,7 @@ func (b *clientFactory) createTLSConfig(c *cli.Context) (*tls.Config, error) {
 	if certPath != "" {
 		myCert, err := tls.LoadX509KeyPair(certPath, keyPath)
 		if err != nil {
-			b.logger.Fatal("Failed to load client certificate", tag.Error(err))
+			log.FatalWithCode(b.logger, errorcode.ToolsTdbgFailed3, "Failed to load client certificate", err)
 			return nil, err
 		}
 		cert = &myCert

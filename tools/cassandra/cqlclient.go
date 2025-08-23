@@ -8,8 +8,8 @@ import (
 	"github.com/gocql/gocql"
 	"go.temporal.io/server/common/auth"
 	"go.temporal.io/server/common/config"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	commongocql "go.temporal.io/server/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"go.temporal.io/server/common/resolver"
@@ -95,7 +95,7 @@ func newCQLClient(cfg *CQLClientConfig, logger log.Logger) (*cqlClient, error) {
 		metrics.NoopMetricsHandler,
 	)
 	if err != nil {
-		logger.Error("Connection validation failed.", tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.ToolsCQLClientOperationFailed, "Connection validation failed.", err)
 		return nil, err
 	}
 	logger.Info("Connection validation succeeded.")
@@ -265,7 +265,7 @@ func (client *cqlClient) dropAllTablesTypes() error {
 	for _, table := range tables {
 		err1 := client.dropTable(table)
 		if err1 != nil {
-			client.logger.Error(fmt.Sprintf("Error dropping table %v.", table), tag.Error(err1))
+			log.ErrorWithCode(client.logger, errorcode.ToolsCQLClientOperationFailed, fmt.Sprintf("Error dropping table %v.", table), err1)
 		}
 	}
 
@@ -280,7 +280,7 @@ func (client *cqlClient) dropAllTablesTypes() error {
 		for _, t := range types {
 			err = client.dropType(t)
 			if err != nil {
-				client.logger.Error(fmt.Sprintf("Error dropping type %v.", t), tag.Error(err))
+				log.ErrorWithCode(client.logger, errorcode.ToolsCQLClientOperationFailed, fmt.Sprintf("Error dropping type %v.", t), err)
 				erroredTypes = append(erroredTypes, t)
 			}
 		}

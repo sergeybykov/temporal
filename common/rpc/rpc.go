@@ -16,6 +16,7 @@ import (
 	"go.temporal.io/server/common/cache"
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/convert"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/membership"
@@ -160,7 +161,7 @@ func (d *RPCFactory) createGRPCListener() net.Listener {
 
 	grpcListener, err := net.Listen("tcp", hostAddress)
 	if err != nil || grpcListener == nil || grpcListener.Addr() == nil {
-		d.logger.Fatal("Failed to start gRPC listener", tag.Error(err), tag.Service(d.serviceName), tag.Address(hostAddress))
+		log.FatalWithCode(d.logger, errorcode.CommonNexusOperationFailed, "Failed to start gRPC listener", err, tag.Service(d.serviceName), tag.Address(hostAddress))
 	}
 
 	d.logger.Info("Created gRPC listener", tag.Service(d.serviceName), tag.Address(hostAddress))
@@ -169,7 +170,7 @@ func (d *RPCFactory) createGRPCListener() net.Listener {
 
 func getListenIP(cfg *config.RPC, logger log.Logger) net.IP {
 	if cfg.BindOnLocalHost && len(cfg.BindOnIP) > 0 {
-		logger.Fatal("ListenIP failed, bindOnLocalHost and bindOnIP are mutually exclusive")
+		log.FatalWithCode(logger, errorcode.CommonNexusOperationFailed, "ListenIP failed, bindOnLocalHost and bindOnIP are mutually exclusive", nil)
 		return nil
 	}
 
@@ -182,12 +183,12 @@ func getListenIP(cfg *config.RPC, logger log.Logger) net.IP {
 		if ip != nil {
 			return ip
 		}
-		logger.Fatal("ListenIP failed, unable to parse bindOnIP value", tag.Address(cfg.BindOnIP))
+		log.FatalWithCode(logger, errorcode.CommonNexusOperationFailed, "ListenIP failed, unable to parse bindOnIP value", nil, tag.Address(cfg.BindOnIP))
 		return nil
 	}
 	ip, err := config.ListenIP()
 	if err != nil {
-		logger.Fatal("ListenIP failed", tag.Error(err))
+		log.FatalWithCode(logger, errorcode.CommonNexusOperationFailed, "ListenIP failed", err)
 		return nil
 	}
 	return ip
@@ -200,12 +201,12 @@ func (d *RPCFactory) CreateRemoteFrontendGRPCConnection(rpcAddress string) *grpc
 	if d.tlsFactory != nil {
 		hostname, _, err2 := net.SplitHostPort(rpcAddress)
 		if err2 != nil {
-			d.logger.Fatal("Invalid rpcAddress for remote cluster", tag.Error(err2))
+			log.FatalWithCode(d.logger, errorcode.CommonNexusOperationFailed, "Invalid rpcAddress for remote cluster", err2)
 		}
 		tlsClientConfig, err = d.tlsFactory.GetRemoteClusterClientConfig(hostname)
 
 		if err != nil {
-			d.logger.Fatal("Failed to create tls config for gRPC connection", tag.Error(err))
+			log.FatalWithCode(d.logger, errorcode.CommonNexusOperationFailed, "Failed to create tls config for gRPC connection", err)
 			return nil
 		}
 	}
@@ -229,7 +230,7 @@ func (d *RPCFactory) createInternodeGRPCConnection(hostName string, serviceName 
 	if d.tlsFactory != nil {
 		tlsClientConfig, err = d.tlsFactory.GetInternodeClientConfig()
 		if err != nil {
-			d.logger.Fatal("Failed to create tls config for gRPC connection", tag.Error(err))
+			log.FatalWithCode(d.logger, errorcode.CommonNexusOperationFailed, "Failed to create tls config for gRPC connection", err)
 			return nil
 		}
 	}
@@ -250,7 +251,7 @@ func (d *RPCFactory) dial(hostName string, tlsClientConfig *tls.Config, dialOpti
 	dialOptions = append(d.dialOptions, dialOptions...)
 	connection, err := Dial(hostName, tlsClientConfig, d.logger, dialOptions...)
 	if err != nil {
-		d.logger.Fatal("Failed to create gRPC connection", tag.Error(err))
+		log.FatalWithCode(d.logger, errorcode.CommonNexusOperationFailed, "Failed to create gRPC connection", err)
 		return nil
 	}
 

@@ -11,6 +11,7 @@ import (
 	exporters "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetrics "go.opentelemetry.io/otel/sdk/metric"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 )
@@ -44,7 +45,7 @@ func NewOpenTelemetryProviderWithStatsd(
 	var err error
 	statsdExp, err := NewStatsdExporter(statsdConfig, logger)
 	if err != nil {
-		logger.Error("Failed to initialize statsd exporter.", tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.InfraMetricsProviderOperationFailed, "Failed to initialize statsd exporter.", err)
 		return nil, err
 	}
 	// Create a PeriodicReader with the StatsD exporter
@@ -76,7 +77,7 @@ func NewOpenTelemetryProviderWithPrometheus(
 	}
 	exporter, err := exporters.New(exporterOpts...)
 	if err != nil {
-		logger.Error("Failed to initialize prometheus exporter.", tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.InfraMetricsProviderOperationFailed, "Failed to initialize prometheus exporter.", err)
 		return nil, err
 	}
 	metricServer := initPrometheusListener(prometheusConfig, reg, logger, fatalOnListenerError)
@@ -136,7 +137,7 @@ func initPrometheusListener(
 	handler.HandleFunc(handlerPath, promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}).ServeHTTP)
 
 	if config.ListenAddress == "" {
-		logger.Fatal("Listen address must be specified.", tag.Address(config.ListenAddress))
+		log.FatalWithCode(logger, errorcode.CommonMetricsOperationFailed, "Listen address must be specified.", nil, tag.Address(config.ListenAddress))
 	}
 	server := &http.Server{Addr: config.ListenAddress, Handler: handler}
 
@@ -148,11 +149,11 @@ func initPrometheusListener(
 		msg := "Failed to initialize prometheus listener."
 		logger := log.With(logger, tag.Error(err), tag.Address(config.ListenAddress))
 		if fatalOnListenerError {
-			logger.Fatal(msg)
+			log.FatalWithCode(logger, errorcode.CommonMetricsOperationFailed, msg, err)
 		} else {
 			// For backward compatibility, we log as Warn instead of Error/Fatal
 			// to match the behavior of tally framework.
-			logger.Warn(msg)
+			log.WarnWithCode(logger, errorcode.CommonMetricsOperationFailed, msg, tag.Error(err))
 		}
 	}()
 
@@ -169,7 +170,7 @@ func (r *openTelemetryProviderImpl) Stop(logger log.Logger) {
 		ctx, closeCtx := context.WithTimeout(context.Background(), time.Second)
 		defer closeCtx()
 		if err := r.server.Shutdown(ctx); !(err == nil || err == http.ErrServerClosed) {
-			logger.Error("Prometheus metrics server shutdown failure.", tag.Address(r.config.ListenAddress), tag.Error(err))
+			log.ErrorWithCode(logger, errorcode.InfraMetricsProviderOperationFailed, "Prometheus metrics server shutdown failure.", err, tag.Address(r.config.ListenAddress))
 		}
 	}
 
@@ -178,7 +179,7 @@ func (r *openTelemetryProviderImpl) Stop(logger log.Logger) {
 		ctx, closeCtx := context.WithTimeout(context.Background(), time.Second)
 		defer closeCtx()
 		if err := r.statsdExporter.Shutdown(ctx); err != nil {
-			logger.Error("StatsD exporter shutdown failure.", tag.Error(err))
+			log.ErrorWithCode(logger, errorcode.InfraMetricsProviderOperationFailed, "StatsD exporter shutdown failure.", err)
 		}
 	}
 }

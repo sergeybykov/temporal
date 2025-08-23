@@ -3,7 +3,8 @@ package clitest
 import (
 	"path/filepath"
 
-	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/tools/common/schema/test"
 	"go.temporal.io/server/tools/sql"
 )
@@ -48,7 +49,7 @@ func NewUpdateSchemaTestSuite(
 func (s *UpdateSchemaTestSuite) SetupSuite() {
 	conn, err := newTestConn("", s.host, s.port, s.pluginName)
 	if err != nil {
-		s.Logger.Fatal("Error creating CQLClient", tag.Error(err))
+		log.FatalWithCode(s.Logger, errorcode.ToolsSqlClitestError2, "Error creating CQLClient", err)
 	}
 	s.SetupSuiteBase(conn, s.pluginName)
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	p "go.temporal.io/server/common/persistence"
@@ -155,7 +156,7 @@ func (m *MetadataStore) CreateNamespaceInV2Table(
 	deleteOrphanNamespace := func() {
 		// Delete namespace from `namespaces_by_id`
 		if errDelete := m.session.Query(templateDeleteNamespaceQuery, request.ID).WithContext(ctx).Exec(); errDelete != nil {
-			m.logger.Warn("Unable to delete orphan namespace record. Error", tag.Error(errDelete))
+			log.WarnWithCode(m.logger, errorcode.CommonPersistenceMetricClientOperationFailed, "Unable to delete orphan namespace record. Error", tag.Error(errDelete))
 		}
 	}
 

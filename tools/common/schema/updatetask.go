@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver/v4"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/persistence"
@@ -142,7 +143,7 @@ func (task *UpdateTask) execStmts(ver string, stmts []string) error {
 			alreadyExists := strings.Contains(err.Error(), "already exist")
 			notFound := strings.Contains(err.Error(), "not found")
 			if alreadyExists || notFound {
-				task.logger.Warn("Duplicate update, most likely due to previous partially succeeded update attempt. Ignoring it and continue.", tag.Error(err))
+				log.WarnWithCode(task.logger, errorcode.ToolsSchemaEmbedOperationFailed, "Duplicate update, most likely due to previous partially succeeded update attempt. Ignoring it and continue.", tag.Error(err))
 				continue
 			}
 
@@ -328,7 +329,7 @@ func sortAndFilterVersions(versions []string, startVerExcl string, endVerIncl st
 		if cmp > 0 {
 			return nil, fmt.Errorf("start version '%s' must be less than end version '%s'", startVerExcl, endVerIncl)
 		} else if cmp == 0 {
-			logger.Warn(
+			log.WarnWithCode(logger, errorcode.ToolsSchemaEmbedOperationFailed,
 				fmt.Sprintf(
 					"Start version '%s' is equal to end version '%s'. Returning empty version list",
 					startVerExcl,
@@ -346,7 +347,7 @@ func sortAndFilterVersions(versions []string, startVerExcl string, endVerIncl st
 	for _, version := range versions {
 		semVer, err := semver.ParseTolerant(version)
 		if err != nil {
-			logger.Warn(fmt.Sprintf("Input '%s' is not a valid semver", version))
+			log.WarnWithCode(logger, errorcode.ToolsSchemaEmbedOperationFailed, fmt.Sprintf("Input '%s' is not a valid semver", version))
 			continue
 		}
 
@@ -400,12 +401,12 @@ func readSchemaDir(fsys fs.FS, dir string, startVer string, endVer string, logge
 	dirNames := make([]string, 0, len(subDirs))
 	for _, d := range subDirs {
 		if !d.IsDir() {
-			logger.Warn("not a directory: " + d.Name())
+			log.WarnWithCode(logger, errorcode.ToolsSchemaEmbedOperationFailed, "not a directory: "+d.Name())
 			continue
 		}
 
 		if !versionDirectoryRegex.MatchString(d.Name()) {
-			logger.Warn("invalid directory name: " + d.Name())
+			log.WarnWithCode(logger, errorcode.ToolsSchemaEmbedOperationFailed, "invalid directory name: "+d.Name())
 			continue
 		}
 

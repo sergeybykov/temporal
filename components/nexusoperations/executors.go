@@ -19,6 +19,7 @@ import (
 	persistencespb "go.temporal.io/server/api/persistence/v1"
 	tokenspb "go.temporal.io/server/api/token/v1"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -258,7 +259,7 @@ func (e taskExecutor) executeInvocationTask(ctx context.Context, env hsm.Environ
 	}
 
 	if callErr != nil {
-		e.Logger.Error("Nexus StartOperation request failed", tag.Error(callErr))
+		log.ErrorWithCode(e.Logger, errorcode.ComponentNexusOperationsFailed, "Nexus StartOperation request failed", callErr)
 	}
 
 	err = e.saveResult(ctx, env, ref, result, callErr)
@@ -351,9 +352,9 @@ func (e taskExecutor) saveResult(ctx context.Context, env hsm.Environment, ref h
 					if err != nil {
 						// TODO(rodrigozhou): links are non-essential for the execution of the workflow,
 						// so ignoring the error for now; we will revisit how to handle these errors later.
-						e.Logger.Error(
+						log.ErrorWithCode(e.Logger, errorcode.ComponentNexusOperationsError,
 							fmt.Sprintf("failed to parse link to %q: %s", nexusLink.Type, nexusLink.URL),
-							tag.Error(err),
+							err,
 						)
 						continue
 					}
@@ -364,7 +365,7 @@ func (e taskExecutor) saveResult(ctx context.Context, env hsm.Environment, ref h
 					})
 				default:
 					// If the link data type is unsupported, just ignore it for now.
-					e.Logger.Error(fmt.Sprintf("invalid link data type: %q", nexusLink.Type))
+					log.ErrorWithCode(e.Logger, errorcode.ComponentNexusOperationsInvalidOperationFailed, fmt.Sprintf("invalid link data type: %q", nexusLink.Type), nil)
 				}
 			}
 		}
@@ -589,7 +590,7 @@ func (e taskExecutor) executeCancelationTask(ctx context.Context, env hsm.Enviro
 	OutboundRequestLatency.With(e.MetricsHandler).Record(time.Since(startTime), namespaceTag, destTag, methodTag, statusCodeTag, failureSourceTag)
 
 	if callErr != nil {
-		e.Logger.Error("Nexus CancelOperation request failed", tag.Error(callErr))
+		log.ErrorWithCode(e.Logger, errorcode.ComponentNexusOperationsFailed2, "Nexus CancelOperation request failed", callErr)
 	}
 
 	err = e.saveCancelationResult(ctx, env, ref, callErr, args.scheduledEventID)
