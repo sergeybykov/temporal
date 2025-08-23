@@ -39,6 +39,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/convert"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -565,7 +566,8 @@ func (adh *AdminHandler) GetSearchAttributes(
 
 	searchAttributes, err := adh.saProvider.GetSearchAttributes(indexName, true)
 	if err != nil {
-		adh.logger.Error("getSearchAttributes error", tag.Error(err))
+		log.ErrorWithCode(adh.logger, errorcode.FrontendSearchAttributesGetFailed,
+			"getSearchAttributes error", err)
 		return nil, serviceerror.NewUnavailablef(errUnableToGetSearchAttributesMessage, err)
 	}
 
@@ -592,7 +594,8 @@ func (adh *AdminHandler) getSearchAttributesElasticsearch(
 		// NotFound can happen when no search attributes were added and the workflow has never been executed.
 		if _, isNotFound := err.(*serviceerror.NotFound); !isNotFound {
 			err = serviceerror.NewUnavailablef("unable to get %s workflow state: %v", addsearchattributes.WorkflowName, err)
-			adh.logger.Error("getSearchAttributes error", tag.Error(err))
+			log.ErrorWithCode(adh.logger, errorcode.FrontendSearchAttributesGetFailed,
+				"getSearchAttributes error", err)
 			return nil, err
 		}
 	} else {
@@ -1767,7 +1770,7 @@ func (adh *AdminHandler) StreamWorkflowReplicationMessages(
 			shutdownChan.Shutdown()
 			err = serverCluster.CloseSend()
 			if err != nil {
-				logger.Error("Failed to close AdminStreamReplicationMessages server", tag.Error(err))
+				log.ErrorWithCode(logger, errorcode.FrontendReplicationMessagesServerCloseFailed, "Failed to close AdminStreamReplicationMessages server", err)
 			}
 
 		}()
@@ -1810,7 +1813,7 @@ func (adh *AdminHandler) StreamWorkflowReplicationMessages(
 					// getShard here to make sure we will talk to correct host when stream is retrying
 					_, err := adh.historyClient.DescribeHistoryHost(ctx, &historyservice.DescribeHistoryHostRequest{ShardId: serverClusterShardID.ShardID})
 					if err != nil {
-						logger.Error("failed to get shard", tag.Error(err))
+						log.ErrorWithCode(logger, errorcode.FrontendHistoryHostDescribeFailed, "failed to get shard", err)
 					}
 					cl()
 				}
