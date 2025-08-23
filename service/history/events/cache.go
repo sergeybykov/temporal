@@ -10,6 +10,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/cache"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -97,7 +98,7 @@ func newEventsCache(
 func (e *CacheImpl) validateKey(key EventKey) bool {
 	if len(key.NamespaceID) == 0 || len(key.WorkflowID) == 0 || len(key.RunID) == 0 || key.EventID < common.FirstEventID {
 		// This is definitely a bug, but just warn and don't crash so we can find anywhere this happens.
-		e.logger.Warn("one or more ids is invalid in event cache",
+		log.WarnWithCode(e.logger, errorcode.HistoryEventsCacheRetrieveFailed, "one or more ids is invalid in event cache",
 			tag.WorkflowID(key.WorkflowID),
 			tag.WorkflowRunID(key.RunID),
 			tag.WorkflowNamespaceID(key.NamespaceID.String()),
@@ -127,8 +128,7 @@ func (e *CacheImpl) GetEvent(ctx context.Context, shardID int32, key EventKey, f
 	event, err := e.getHistoryEventFromStore(ctx, shardID, key, firstEventID, branchToken)
 	if err != nil {
 		metrics.CacheFailures.With(handler).Record(1)
-		e.logger.Error("Cache unable to retrieve event from store",
-			tag.Error(err),
+		log.ErrorWithCode(e.logger, errorcode.HistoryEventsCacheRetrieveFailed, "Cache unable to retrieve event from store", err,
 			tag.WorkflowID(key.WorkflowID),
 			tag.WorkflowRunID(key.RunID),
 			tag.WorkflowNamespaceID(key.NamespaceID.String()),
@@ -191,7 +191,7 @@ func (e *CacheImpl) getHistoryEventFromStore(
 		// noop
 	case *serviceerror.DataLoss, *serialization.DeserializationError, *serialization.SerializationError:
 		// log event
-		e.logger.Error("encounter data corruption event",
+		log.ErrorWithCode(e.logger, errorcode.HistoryEventsDataCorruption, "encounter data corruption event", err,
 			tag.WorkflowNamespaceID(key.NamespaceID.String()),
 			tag.WorkflowID(key.WorkflowID),
 			tag.WorkflowRunID(key.RunID))

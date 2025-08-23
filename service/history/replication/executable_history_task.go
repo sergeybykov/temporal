@@ -15,7 +15,9 @@ import (
 	replicationspb "go.temporal.io/server/api/replication/v1"
 	workflowspb "go.temporal.io/server/api/workflow/v1"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/namespace"
@@ -106,7 +108,7 @@ func (e *ExecutableHistoryTask) Execute() error {
 	if nsError != nil {
 		return nsError
 	} else if !apply {
-		e.Logger.Warn("Skipping the replication task",
+		log.WarnWithCode(e.Logger, errorcode.HistoryHistoryReplicationFailed, "Skipping the replication task",
 			tag.WorkflowNamespaceID(e.NamespaceID),
 			tag.WorkflowID(e.WorkflowID),
 			tag.WorkflowRunID(e.RunID),
@@ -169,7 +171,7 @@ func (e *ExecutableHistoryTask) HandleErr(err error) error {
 		}
 		return e.Execute()
 	default:
-		e.Logger.Error("history replication task encountered error",
+		log.ErrorWithCode(e.Logger, errorcode.HistoryHistoryReplicationError, "history replication task encountered error", err,
 			tag.WorkflowNamespaceID(e.NamespaceID),
 			tag.WorkflowID(e.WorkflowID),
 			tag.WorkflowRunID(e.RunID),
@@ -194,7 +196,7 @@ func (e *ExecutableHistoryTask) MarkPoisonPill() error {
 		for _, eventsBlob := range e.eventsBlobs {
 			events, err := e.EventSerializer.DeserializeEvents(eventsBlob)
 			if err != nil {
-				e.Logger.Error("unable to enqueue history replication task to DLQ, ser/de error",
+				log.ErrorWithCode(e.Logger, errorcode.HistoryHistoryReplicationError, "unable to enqueue history replication task to DLQ, ser/de error", err,
 					tag.ShardID(shardContext.GetShardID()),
 					tag.WorkflowNamespaceID(e.NamespaceID),
 					tag.WorkflowID(e.WorkflowID),
@@ -206,7 +208,7 @@ func (e *ExecutableHistoryTask) MarkPoisonPill() error {
 			}
 
 			if len(events) == 0 {
-				e.Logger.Error("unable to enqueue history replication task to DLQ, no events",
+				log.ErrorWithCode(e.Logger, errorcode.HistoryHistoryReplicationError, "unable to enqueue history replication task to DLQ, no events", nil,
 					tag.ShardID(shardContext.GetShardID()),
 					tag.WorkflowNamespaceID(e.NamespaceID),
 					tag.WorkflowID(e.WorkflowID),
@@ -258,7 +260,7 @@ func (e *ExecutableHistoryTask) getDeserializedEvents() (_ [][]*historypb.Histor
 	for _, eventsBlob := range e.eventsBlobs {
 		events, err := e.EventSerializer.DeserializeEvents(eventsBlob)
 		if err != nil {
-			e.Logger.Error("unable to deserialize history events",
+			log.ErrorWithCode(e.Logger, errorcode.HistoryHistoryReplicationError, "unable to deserialize history events", err,
 				tag.WorkflowNamespaceID(e.NamespaceID),
 				tag.WorkflowID(e.WorkflowID),
 				tag.WorkflowRunID(e.RunID),
@@ -272,7 +274,7 @@ func (e *ExecutableHistoryTask) getDeserializedEvents() (_ [][]*historypb.Histor
 
 	newRunEvents, err := e.EventSerializer.DeserializeEvents(e.newRunEventsBlob)
 	if err != nil {
-		e.Logger.Error("unable to deserialize new run history events",
+		log.ErrorWithCode(e.Logger, errorcode.HistoryHistoryReplicationError, "unable to deserialize new run history events", err,
 			tag.WorkflowNamespaceID(e.NamespaceID),
 			tag.WorkflowID(e.WorkflowID),
 			tag.WorkflowRunID(e.RunID),

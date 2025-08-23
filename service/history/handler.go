@@ -26,6 +26,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/convert"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -391,8 +392,7 @@ func (h *Handler) RecordWorkflowTaskStarted(ctx context.Context, request *histor
 	}
 	engine, err := shardContext.GetEngine(ctx)
 	if err != nil {
-		h.logger.Error("RecordWorkflowTaskStarted failed.",
-			tag.Error(err),
+		log.ErrorWithCode(h.logger, errorcode.HistoryEngineRetrievalFailed, "RecordWorkflowTaskStarted failed.", err,
 			tag.WorkflowID(request.WorkflowExecution.GetWorkflowId()),
 			tag.WorkflowRunID(request.WorkflowExecution.GetRunId()),
 			tag.WorkflowScheduledEventID(request.GetScheduledEventId()),
@@ -1200,6 +1200,7 @@ func (h *Handler) DeleteWorkflowExecution(ctx context.Context, request *historys
 	}
 
 	h.logger.Info("DeleteWorkflowExecution requested",
+		tag.ErrorCode(errorcode.HistoryTaskProcessingFailed),
 		tag.WorkflowNamespaceID(request.GetNamespaceId()),
 		tag.WorkflowID(workflowExecution.GetWorkflowId()),
 		tag.WorkflowRunID(workflowExecution.GetRunId()))
@@ -1671,12 +1672,12 @@ func (h *Handler) GetReplicationMessages(ctx context.Context, request *historyse
 
 			shardContext, err := h.controller.GetShardByID(token.GetShardId())
 			if err != nil {
-				h.logger.Warn("History engine not found for shard", tag.Error(err))
+				log.WarnWithCode(h.logger, errorcode.HistoryHistoryHandlerOperationFailed, "History engine not found for shard", tag.Error(err))
 				return
 			}
 			engine, err := shardContext.GetEngine(ctx)
 			if err != nil {
-				h.logger.Warn("History engine not found for shard", tag.Error(err))
+				log.WarnWithCode(h.logger, errorcode.HistoryHistoryHandlerOperationFailed2, "History engine not found for shard", tag.Error(err))
 				return
 			}
 
@@ -1688,7 +1689,7 @@ func (h *Handler) GetReplicationMessages(ctx context.Context, request *historyse
 				token.GetLastRetrievedMessageId(),
 			)
 			if err != nil {
-				h.logger.Warn("Failed to get replication tasks for shard", tag.Error(err))
+				log.WarnWithCode(h.logger, errorcode.HistoryHistoryHandlerFailed, "Failed to get replication tasks for shard", tag.Error(err))
 				return
 			}
 
@@ -1749,12 +1750,12 @@ func (h *Handler) GetDLQReplicationMessages(ctx context.Context, request *histor
 			taskInfos[0].GetWorkflowId(),
 		)
 		if err != nil {
-			h.logger.Warn("History engine not found for workflow ID.", tag.Error(err))
+			log.WarnWithCode(h.logger, errorcode.HistoryHistoryHandlerOperationFailed3, "History engine not found for workflow ID.", tag.Error(err))
 			return
 		}
 		engine, err := shardContext.GetEngine(ctx)
 		if err != nil {
-			h.logger.Warn("History engine not found for workflow ID.", tag.Error(err))
+			log.WarnWithCode(h.logger, errorcode.HistoryHistoryHandlerOperationFailed4, "History engine not found for workflow ID.", tag.Error(err))
 			return
 		}
 
@@ -1763,7 +1764,7 @@ func (h *Handler) GetDLQReplicationMessages(ctx context.Context, request *histor
 			taskInfos,
 		)
 		if err != nil {
-			h.logger.Error("Failed to get dlq replication tasks.", tag.Error(err))
+			log.ErrorWithCode(h.logger, errorcode.HistoryDLQReplicationTasksFailed, "Failed to get dlq replication tasks.", err)
 			return
 		}
 
@@ -2293,6 +2294,7 @@ func (h *Handler) ForceDeleteWorkflowExecution(
 
 	workflowExecution := request.GetRequest().GetExecution()
 	h.logger.Info("ForceDeleteWorkflowExecution requested",
+		tag.ErrorCode(errorcode.HistoryTaskProcessingFailed),
 		tag.WorkflowNamespaceID(request.GetNamespaceId()),
 		tag.WorkflowID(workflowExecution.GetWorkflowId()),
 		tag.WorkflowRunID(workflowExecution.GetRunId()))

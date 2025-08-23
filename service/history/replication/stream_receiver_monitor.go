@@ -12,6 +12,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/channel"
 	"go.temporal.io/server/common/cluster"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -84,7 +85,7 @@ func (m *StreamReceiverMonitorImpl) Start() {
 	go m.eventLoop()
 	go m.statusMonitorLoop()
 
-	m.Logger.Info("StreamReceiverMonitor started.")
+	m.Logger.Info("StreamReceiverMonitor started.", tag.ErrorCode(errorcode.HistoryTaskProcessingFailed))
 }
 
 func (m *StreamReceiverMonitorImpl) Stop() {
@@ -106,7 +107,7 @@ func (m *StreamReceiverMonitorImpl) Stop() {
 		stream.Stop()
 		delete(m.outboundStreams, serverKey)
 	}
-	m.Logger.Info("StreamReceiverMonitor stopped.")
+	m.Logger.Info("StreamReceiverMonitor stopped.", tag.ErrorCode(errorcode.HistoryInvalidState))
 }
 
 func (m *StreamReceiverMonitorImpl) RegisterInboundStream(
@@ -340,9 +341,9 @@ func (m *StreamReceiverMonitorImpl) evaluateSingleStreamConnection(key *ClusterS
 	checkIfMakeProgress := func(priority enumsspb.TaskPriority, currentAckLevel int64, currentMaxTaskId int64, previousAckLevel int64, previousMaxReplicationTaskId int64) bool {
 		// 2 continuous data points where ACK level is not moving forward and ACK level is behind previous Max Replication taskId
 		if currentAckLevel == previousAckLevel && currentAckLevel < previousMaxReplicationTaskId {
-			m.Logger.Error(
+			log.ErrorWithCode(m.Logger, errorcode.HistoryHistoryReplicationError,
 				fmt.Sprintf("%v replication is not making progress. previousAckLevel: %v, previousMaxTaskId: %v, currentAckLevel: %v, currentMaxTaskId: %v",
-					priority.String(), previousAckLevel, previousMaxReplicationTaskId, currentAckLevel, currentMaxTaskId),
+					priority.String(), previousAckLevel, previousMaxReplicationTaskId, currentAckLevel, currentMaxTaskId), nil,
 				tag.SourceShardID(key.Server.ShardID), tag.TargetCluster(strconv.Itoa(int(key.Client.ClusterID))), tag.TargetShardID(key.Client.ShardID))
 			metrics.ReplicationStreamStuck.With(m.MetricsHandler).Record(
 				int64(1),
@@ -377,20 +378,20 @@ func (m *StreamReceiverMonitorImpl) generateStatusMap(inboundKeys map[ClusterSha
 func (m *StreamReceiverMonitorImpl) fillStatusMap(statusMap map[ClusterShardKeyPair]*streamStatus, serverKey ClusterShardKey, clientsKeys []ClusterShardKey) {
 	shardContext, err := m.ShardController.GetShardByID(serverKey.ShardID)
 	if err != nil {
-		m.Logger.Error("Failed to get shardContext.", tag.Error(err))
+		log.ErrorWithCode(m.Logger, errorcode.HistoryHistoryReplicationError, "Failed to get shardContext.", err)
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	engine, err := shardContext.GetEngine(ctx)
 	if err != nil {
-		m.Logger.Error("Failed to get engine.", tag.Error(err))
+		log.ErrorWithCode(m.Logger, errorcode.HistoryHistoryReplicationError, "Failed to get engine.", err)
 		return
 	}
 	maxTaskId, _ := engine.GetMaxReplicationTaskInfo()
 	queueState, ok := shardContext.GetQueueState(tasks.CategoryReplication)
 	if !ok {
-		m.Logger.Error("Failed to get queue state.")
+		log.ErrorWithCode(m.Logger, errorcode.HistoryHistoryReplicationError, "Failed to get queue state.", nil)
 		return
 	}
 	readerStates := queueState.GetReaderStates()
@@ -401,7 +402,7 @@ func (m *StreamReceiverMonitorImpl) fillStatusMap(statusMap map[ClusterShardKeyP
 		)
 		readerState, ok := readerStates[readerID]
 		if !ok {
-			m.Logger.Error("Failed to get reader state.")
+			log.ErrorWithCode(m.Logger, errorcode.HistoryHistoryReplicationError, "Failed to get reader state.", nil)
 			statusMap[ClusterShardKeyPair{Client: clientKey, Server: serverKey}] = &streamStatus{
 				maxReplicationTaskId: maxTaskId,
 				isTieredStackEnabled: false,

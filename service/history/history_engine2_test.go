@@ -31,6 +31,7 @@ import (
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/locks"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -584,7 +585,7 @@ func (s *engine2Suite) TestRecordWorkflowTaskStartedIfTaskAlreadyStarted() {
 	s.Nil(response)
 	s.NotNil(err)
 	s.IsType(&serviceerrors.TaskAlreadyStarted{}, err)
-	s.logger.Error("RecordWorkflowTaskStarted failed with", tag.Error(err))
+	log.ErrorWithCode(s.logger, errorcode.WorkflowTaskAlreadyStarted, "RecordWorkflowTaskStarted failed with", err)
 }
 
 func (s *engine2Suite) TestRecordWorkflowTaskStartedIfTaskAlreadyCompleted() {
@@ -620,7 +621,7 @@ func (s *engine2Suite) TestRecordWorkflowTaskStartedIfTaskAlreadyCompleted() {
 	s.Nil(response)
 	s.NotNil(err)
 	s.IsType(&serviceerror.NotFound{}, err)
-	s.logger.Error("RecordWorkflowTaskStarted failed with", tag.Error(err))
+	log.ErrorWithCode(s.logger, errorcode.WorkflowTaskNotFound, "RecordWorkflowTaskStarted failed with", err)
 }
 
 func (s *engine2Suite) TestRecordWorkflowTaskStartedConflictOnUpdate() {
@@ -884,7 +885,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedIfNoExecution() {
 		},
 	)
 	if err != nil {
-		s.logger.Error("Unexpected Error", tag.Error(err))
+		log.ErrorWithCode(s.logger, errorcode.UnknownError, "Unexpected Error", err)
 	}
 	s.Nil(response)
 	s.NotNil(err)

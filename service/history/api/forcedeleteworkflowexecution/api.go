@@ -8,6 +8,7 @@ import (
 	"go.temporal.io/server/api/adminservice/v1"
 	"go.temporal.io/server/api/historyservice/v1"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
@@ -59,7 +60,7 @@ func Invoke(
 		}
 		// continue to deletion
 		warnMsg := "Unable to load mutable state. Skipping workflow history deletion."
-		logger.Warn(warnMsg, tag.Error(err))
+		log.WarnWithCode(logger, errorcode.HistoryWorkflowNotFound, warnMsg, tag.Error(err))
 		warnings = append(warnings, fmt.Sprintf("%s. Error: %v", warnMsg, err.Error()))
 	} else {
 		// load necessary information from mutable state
@@ -108,7 +109,7 @@ func Invoke(
 			BranchToken: branchToken,
 		}); err != nil {
 			warnMsg := "Failed to delete history branch, skip"
-			logger.Warn(warnMsg, tag.WorkflowBranchID(string(branchToken)), tag.Error(err))
+			log.WarnWithCode(logger, errorcode.HistoryConditionFailed, warnMsg, tag.WorkflowBranchID(string(branchToken)), tag.Error(err))
 			warnings = append(warnings, fmt.Sprintf("%s. BranchToken: %v, Error: %v", warnMsg, branchToken, err.Error()))
 		}
 	}

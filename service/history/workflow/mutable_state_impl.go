@@ -42,6 +42,7 @@ import (
 	"go.temporal.io/server/common/convert"
 	"go.temporal.io/server/common/definition"
 	"go.temporal.io/server/common/enums"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/failure"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -2476,7 +2477,7 @@ func (ms *MutableStateImpl) AddWorkflowExecutionStartedEventWithOptions(
 
 	eventID := ms.GetNextEventID()
 	if eventID != common.FirstEventID {
-		ms.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
+		log.WarnWithCode(ms.logger, errorcode.HistoryDataInconsistency, mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(eventID),
 			tag.ErrorTypeInvalidHistoryAction)
 		return nil, ms.createInternalServerError(opTag)
@@ -3404,7 +3405,7 @@ func (ms *MutableStateImpl) AddActivityTaskScheduledEvent(
 
 	_, ok := ms.GetActivityByActivityID(command.GetActivityId())
 	if ok {
-		ms.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
+		log.WarnWithCode(ms.logger, errorcode.HistoryDataInconsistency, mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(ms.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction)
 		return nil, nil, ms.createCallerError(opTag, "ActivityID: "+command.GetActivityId())
@@ -3675,7 +3676,7 @@ func (ms *MutableStateImpl) AddActivityTaskCompletedEvent(
 	}
 
 	if ai, ok := ms.GetActivityInfo(scheduledEventID); !ok || ai.StartedEventId != startedEventID {
-		ms.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
+		log.WarnWithCode(ms.logger, errorcode.HistoryDataInconsistency, mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(ms.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.Bool(ok),
@@ -3723,7 +3724,7 @@ func (ms *MutableStateImpl) AddActivityTaskFailedEvent(
 	}
 
 	if ai, ok := ms.GetActivityInfo(scheduledEventID); !ok || ai.StartedEventId != startedEventID {
-		ms.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
+		log.WarnWithCode(ms.logger, errorcode.HistoryDataInconsistency, mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(ms.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.Bool(ok),
@@ -3773,7 +3774,7 @@ func (ms *MutableStateImpl) AddActivityTaskTimedOutEvent(
 	ai, ok := ms.GetActivityInfo(scheduledEventID)
 	if !ok || ai.StartedEventId != startedEventID || ((timeoutType == enumspb.TIMEOUT_TYPE_START_TO_CLOSE ||
 		timeoutType == enumspb.TIMEOUT_TYPE_HEARTBEAT) && ai.StartedEventId == common.EmptyEventID) {
-		ms.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
+		log.WarnWithCode(ms.logger, errorcode.HistoryDataInconsistency, mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(ms.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.Bool(ok),
@@ -5941,7 +5942,8 @@ func (ms *MutableStateImpl) AddTasks(
 		category := task.GetCategory()
 		if category.Type() == tasks.CategoryTypeScheduled &&
 			task.GetVisibilityTime().Sub(now) > maxScheduledTaskDuration {
-			ms.logger.Info("Dropped long duration scheduled task.", tasks.Tags(task)...)
+			taskTags := append([]tag.Tag{tag.ErrorCode(errorcode.HistoryTaskProcessingFailed)}, tasks.Tags(task)...)
+			ms.logger.Info("Dropped long duration scheduled task.", taskTags...)
 			continue
 		}
 		ms.InsertTasks[category] = append(ms.InsertTasks[category], task)
@@ -6058,12 +6060,12 @@ func (ms *MutableStateImpl) StartTransaction(
 	namespaceEntry *namespace.Namespace,
 ) (bool, error) {
 	if ms.IsDirty() {
-		ms.logger.Error("MutableState encountered dirty transaction",
+		log.ErrorWithCode(ms.logger, errorcode.HistoryMutableStateDirtyTransaction,
+			"MutableState encountered dirty transaction", nil,
 			tag.WorkflowNamespaceID(ms.executionInfo.NamespaceId),
 			tag.WorkflowID(ms.executionInfo.WorkflowId),
 			tag.WorkflowRunID(ms.executionState.RunId),
-			tag.Value(ms.hBuilder),
-		)
+			tag.Value(ms.hBuilder))
 		metrics.MutableStateChecksumInvalidated.With(ms.metricsHandler).Record(1)
 		return false, serviceerror.NewUnavailable("MutableState encountered dirty transaction")
 	}
@@ -7484,6 +7486,7 @@ func (ms *MutableStateImpl) createCallerError(
 }
 
 func (ms *MutableStateImpl) logInfo(msg string, tags ...tag.Tag) {
+	tags = append(tags, tag.ErrorCode(errorcode.HistoryWorkflowExists))
 	tags = append(tags, tag.WorkflowID(ms.executionInfo.WorkflowId))
 	tags = append(tags, tag.WorkflowRunID(ms.executionState.RunId))
 	tags = append(tags, tag.WorkflowNamespaceID(ms.executionInfo.NamespaceId))
@@ -7494,7 +7497,7 @@ func (ms *MutableStateImpl) logWarn(msg string, tags ...tag.Tag) {
 	tags = append(tags, tag.WorkflowID(ms.executionInfo.WorkflowId))
 	tags = append(tags, tag.WorkflowRunID(ms.executionState.RunId))
 	tags = append(tags, tag.WorkflowNamespaceID(ms.executionInfo.NamespaceId))
-	ms.logger.Warn(msg, tags...)
+	log.WarnWithCode(ms.logger, errorcode.HistoryDataInconsistency, msg, tags...)
 }
 
 func (ms *MutableStateImpl) logError(msg string, tags ...tag.Tag) {
@@ -7506,11 +7509,11 @@ func (ms *MutableStateImpl) logDataInconsistency() {
 	workflowID := ms.executionInfo.WorkflowId
 	runID := ms.executionState.RunId
 
-	ms.logger.Error("encounter cassandra data inconsistency",
+	log.ErrorWithCode(ms.logger, errorcode.HistoryDataInconsistency,
+		"encounter cassandra data inconsistency", nil,
 		tag.WorkflowNamespaceID(namespaceID),
 		tag.WorkflowID(workflowID),
-		tag.WorkflowRunID(runID),
-	)
+		tag.WorkflowRunID(runID))
 }
 
 func (ms *MutableStateImpl) HasCompletedAnyWorkflowTask() bool {
@@ -8320,5 +8323,5 @@ func logError(
 	tags = append(tags, tag.WorkflowID(executionInfo.WorkflowId))
 	tags = append(tags, tag.WorkflowRunID(executionState.RunId))
 	tags = append(tags, tag.WorkflowNamespaceID(executionInfo.NamespaceId))
-	logger.Error(msg, tags...)
+	log.ErrorWithCode(logger, errorcode.HistoryDataInconsistency, msg, nil, tags...)
 }

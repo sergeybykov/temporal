@@ -12,6 +12,7 @@ import (
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -173,7 +174,7 @@ func (r *ReaderImpl) Stop() {
 	close(r.shutdownCh)
 	r.rateLimitContextCancel()
 	if success := common.AwaitWaitGroup(&r.shutdownWG, time.Minute); !success {
-		r.logger.Warn("queue reader shutdown timed out waiting for event loop", tag.LifeCycleStopTimedout)
+		log.WarnWithCode(r.logger, errorcode.InfraServiceShutdownFailed, "queue reader shutdown timed out waiting for event loop", tag.LifeCycleStopTimedout)
 	}
 	r.logger.Info("queue reader stopped", tag.LifeCycleStopped)
 }
@@ -425,7 +426,7 @@ func (r *ReaderImpl) loadAndSubmitTasks() {
 		}
 
 		// this should never happen
-		r.logger.Error("Queue reader rate limiter burst size is smaller than required token count")
+		log.ErrorWithCode(r.logger, errorcode.HistoryQueueRateLimiterConfiguration, "Queue reader rate limiter burst size is smaller than required token count", nil)
 	}
 
 	r.Lock()
@@ -447,7 +448,7 @@ func (r *ReaderImpl) loadAndSubmitTasks() {
 	loadSlice := r.nextReadSlice.Value.(Slice)
 	tasks, err := loadSlice.SelectTasks(r.readerID, r.options.BatchSize())
 	if err != nil {
-		r.logger.Error("Queue reader unable to retrieve tasks", tag.Error(err))
+		log.ErrorWithCode(r.logger, errorcode.HistoryQueueTaskRetrieveFailed, "Queue reader unable to retrieve tasks", err)
 		if common.IsResourceExhausted(err) {
 			r.pauseLocked(throttleRetryDelay)
 		} else {

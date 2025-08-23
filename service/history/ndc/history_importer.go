@@ -11,6 +11,7 @@ import (
 	chasmworkflow "go.temporal.io/server/chasm/lib/workflow"
 	"go.temporal.io/server/common/convert"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
@@ -175,7 +176,7 @@ func (r *HistoryImporterImpl) applyEvents(
 	if mutableStateSpec.IsBrandNew {
 		if task.getFirstEvent().GetEventType() != enumspb.EVENT_TYPE_WORKFLOW_EXECUTION_STARTED {
 			err := serviceerror.NewInternal("mutable state is brand new, but events are not imported from beginning")
-			task.getLogger().Error("HistoryImporter::applyEvents encountered mutable state vs events mismatch", tag.Error(err))
+			log.ErrorWithCode(task.getLogger(), errorcode.PersistenceNDCHistoryImporterOperationFailed, "HistoryImporter::applyEvents encountered mutable state vs events mismatch", err)
 			return nil, false, err
 		}
 		return r.applyStartEventsAndSerialize(
@@ -213,10 +214,7 @@ func (r *HistoryImporterImpl) applyStartEventsAndSerialize(
 		return nil, false, err
 	}
 	if newMutableState != nil {
-		task.getLogger().Error(
-			"HistoryImporter::applyStartEventsAndSerialize encountered create workflow with continue as new case",
-			tag.Error(err),
-		)
+		log.ErrorWithCode(task.getLogger(), errorcode.PersistenceNDCHistoryImporterOperationFailed, "HistoryImporter::applyStartEventsAndSerialize encountered create workflow with continue as new case", err)
 	}
 	token, err := r.persistHistoryAndSerializeMutableState(ctx, mutableState, mutableStateSpec)
 	return token, err == nil, err
@@ -266,10 +264,7 @@ func (r *HistoryImporterImpl) applyNonStartEventsAndSerialize(
 	}
 
 	if newMutableState != nil {
-		task.getLogger().Error(
-			"HistoryImporter::applyNonStartEventsAndSerialize encountered create workflow with continue as new case",
-			tag.Error(err),
-		)
+		log.ErrorWithCode(task.getLogger(), errorcode.PersistenceNDCHistoryImporterOperationFailed, "HistoryImporter::applyNonStartEventsAndSerialize encountered create workflow with continue as new case", err)
 	}
 	token, err := r.persistHistoryAndSerializeMutableState(ctx, mutableState, mutableStateSpec)
 	return token, err == nil, err
@@ -338,7 +333,7 @@ func (r *HistoryImporterImpl) commit(
 			ctx,
 			memNDCWorkflow,
 		); err != nil {
-			r.logger.Error("HistoryImporter::commit encountered error", tag.Error(err))
+			log.ErrorWithCode(r.logger, errorcode.PersistenceNDCHistoryImporterOperationFailed, "HistoryImporter::commit encountered error creating workflow", err)
 			return err
 		}
 		return nil
@@ -353,7 +348,7 @@ func (r *HistoryImporterImpl) commit(
 		chasmworkflow.Archetype,
 	)
 	if err != nil {
-		r.logger.Error("HistoryImporter::commit unable to find workflow in DB", tag.Error(err))
+		log.ErrorWithCode(r.logger, errorcode.PersistenceNDCHistoryImporterOperationFailed, "HistoryImporter::commit unable to find workflow in DB", err)
 		return err
 	}
 	defer func() {
@@ -369,19 +364,19 @@ func (r *HistoryImporterImpl) commit(
 		dbNDCWorkflow.GetMutableState().GetExecutionInfo().GetVersionHistories(),
 	)
 	if err != nil {
-		r.logger.Error("HistoryImporter::commit unable to find current version history from DB", tag.Error(err))
+		log.ErrorWithCode(r.logger, errorcode.PersistenceNDCHistoryImporterOperationFailed, "HistoryImporter::commit unable to find current version history from DB", err)
 		return err
 	}
 	memCurrentVersionHistory, err := versionhistory.GetCurrentVersionHistory(
 		memNDCWorkflow.GetMutableState().GetExecutionInfo().GetVersionHistories(),
 	)
 	if err != nil {
-		r.logger.Error("HistoryImporter::commit unable to find current version history from DB", tag.Error(err))
+		log.ErrorWithCode(r.logger, errorcode.PersistenceNDCHistoryImporterOperationFailed, "HistoryImporter::commit unable to find current version history from memory", err)
 		return err
 	}
 	cmpResult, err := versionhistory.CompareVersionHistory(memCurrentVersionHistory, dbCurrentVersionHistory)
 	if err != nil {
-		r.logger.Error("HistoryImporter::commit unable to compare current version history between mem vs DB", tag.Error(err))
+		log.ErrorWithCode(r.logger, errorcode.PersistenceNDCHistoryImporterOperationFailed, "HistoryImporter::commit unable to compare current version history between mem vs DB", err)
 		return err
 	}
 	if cmpResult == 0 {
@@ -397,18 +392,18 @@ func (r *HistoryImporterImpl) commit(
 			memCurrentVersionHistory,
 		)
 		if err != nil {
-			r.logger.Error("HistoryImporter::commit unable to update version history from DB", tag.Error(err))
+			log.ErrorWithCode(r.logger, errorcode.PersistenceNDCHistoryImporterOperationFailed, "HistoryImporter::commit unable to update version history from DB", err)
 			return err
 		}
 		if updated {
 			err = serviceerror.NewInternal("current version history should not be updated")
-			r.logger.Error("HistoryImporter::commit unable to update version history from DB", tag.Error(err))
+			log.ErrorWithCode(r.logger, errorcode.PersistenceNDCHistoryImporterOperationFailed, "HistoryImporter::commit unable to update version history when updated flag is true", err)
 			return err
 		}
 		sizeDiff := memNDCWorkflow.GetMutableState().GetHistorySize() - mutableStateSpec.DBHistorySize
 		dbNDCWorkflow.GetMutableState().AddHistorySize(sizeDiff)
 		if err := dbNDCWorkflow.GetContext().SetWorkflowExecution(ctx, r.shardContext); err != nil {
-			r.logger.Error("HistoryImporter::commit encountered error", tag.Error(err))
+			log.ErrorWithCode(r.logger, errorcode.PersistenceNDCHistoryImporterOperationFailed, "HistoryImporter::commit encountered error setting workflow execution", err)
 		}
 		return nil
 	}
@@ -432,7 +427,7 @@ func (r *HistoryImporterImpl) commit(
 		memNDCWorkflow,
 		nil,
 	); err != nil {
-		r.logger.Error("HistoryImporter::commit encountered error", tag.Error(err))
+		log.ErrorWithCode(r.logger, errorcode.PersistenceNDCHistoryImporterOperationFailed, "HistoryImporter::commit encountered error updating workflow", err)
 		return err
 	}
 	return nil

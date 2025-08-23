@@ -14,7 +14,9 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/contextutil"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/locks"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/persistence/transitionhistory"
@@ -85,7 +87,7 @@ func GetOrPollMutableState(
 	currentVersionedTransition := transitionhistory.LastVersionedTransition(transitionHistory)
 	if len(transitionHistory) != 0 && request.VersionedTransition != nil {
 		if transitionhistory.StalenessCheck(transitionHistory, request.VersionedTransition) != nil {
-			logger.Warn(fmt.Sprintf("Request versioned transition and transition history don't match. Request: %v, current: %v",
+			log.WarnWithCode(logger, errorcode.HistoryCurrentBranchChanged, fmt.Sprintf("Request versioned transition and transition history don't match. Request: %v, current: %v",
 				request.VersionedTransition,
 				currentVersionedTransition),
 				tag.WorkflowNamespaceID(workflowKey.GetNamespaceID()),
@@ -106,7 +108,7 @@ func GetOrPollMutableState(
 		if err != nil {
 			return nil, err
 		}
-		logger.Warn("Request history branch and current history branch don't match",
+		log.WarnWithCode(logger, errorcode.HistoryCurrentBranchChanged, "Request history branch and current history branch don't match",
 			tag.Value(logItem),
 			tag.TokenLastEventVersion(request.VersionHistoryItem.GetVersion()),
 			tag.TokenLastEventID(request.VersionHistoryItem.GetEventId()),
@@ -155,7 +157,7 @@ func GetOrPollMutableState(
 		currentVersionedTransition := transitionhistory.LastVersionedTransition(transitionHistory)
 		if len(transitionHistory) != 0 && request.VersionedTransition != nil {
 			if transitionhistory.StalenessCheck(transitionHistory, request.VersionedTransition) != nil {
-				logger.Warn(fmt.Sprintf("Request versioned transition and transition history don't match prior to polling the mutable state. Request: %v, current: %v",
+				log.WarnWithCode(logger, errorcode.HistoryCurrentBranchChanged, fmt.Sprintf("Request versioned transition and transition history don't match prior to polling the mutable state. Request: %v, current: %v",
 					request.VersionedTransition,
 					currentVersionedTransition),
 					tag.WorkflowNamespaceID(workflowKey.GetNamespaceID()),
@@ -169,7 +171,7 @@ func GetOrPollMutableState(
 			if err != nil {
 				return nil, err
 			}
-			logger.Warn("Request history branch and current history branch don't match prior to polling the mutable state",
+			log.WarnWithCode(logger, errorcode.HistoryCurrentBranchChanged, "Request history branch and current history branch don't match prior to polling the mutable state",
 				tag.Value(logItem),
 				tag.TokenLastEventVersion(request.VersionHistoryItem.GetVersion()),
 				tag.TokenLastEventID(request.VersionHistoryItem.GetEventId()),
@@ -224,7 +226,7 @@ func GetOrPollMutableState(
 				currentVersionedTransition := transitionhistory.LastVersionedTransition(transitionHistory)
 				if len(transitionHistory) != 0 && request.VersionedTransition != nil {
 					if transitionhistory.StalenessCheck(transitionHistory, request.VersionedTransition) != nil {
-						logger.Warn(fmt.Sprintf("Request versioned transition and transition history don't match after polling the mutable state. Request: %v, current: %v",
+						log.WarnWithCode(logger, errorcode.HistoryCurrentBranchChanged, fmt.Sprintf("Request versioned transition and transition history don't match after polling the mutable state. Request: %v, current: %v",
 							request.VersionedTransition,
 							currentVersionedTransition),
 							tag.WorkflowNamespaceID(workflowKey.GetNamespaceID()),
@@ -234,7 +236,7 @@ func GetOrPollMutableState(
 					}
 				}
 				if !versionhistory.ContainsVersionHistoryItem(eventVersionHistory, request.VersionHistoryItem) {
-					logger.Warn("Request history branch and current history branch don't match after polling the mutable state",
+					log.WarnWithCode(logger, errorcode.HistoryCurrentBranchChanged, "Request history branch and current history branch don't match after polling the mutable state",
 						tag.Value(notifiedEventVersionItem),
 						tag.TokenLastEventVersion(request.VersionHistoryItem.GetVersion()),
 						tag.TokenLastEventID(request.VersionHistoryItem.GetEventId()),

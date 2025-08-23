@@ -21,9 +21,9 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/convert"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/goro"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/membership"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/metrics/metricstest"
@@ -371,7 +371,7 @@ func (s *controllerSuite) TestHistoryEngineClosed() {
 				for shardID := int32(1); shardID <= 2; shardID++ {
 					_, err := s.shardController.GetShardByID(shardID)
 					if err != nil {
-						s.logger.Error("ShardLost", tag.Error(err))
+						log.ErrorWithCode(s.logger, errorcode.ShardLost, "ShardLost", err)
 						shardLost = true
 					}
 					time.Sleep(20 * time.Millisecond)
@@ -425,7 +425,7 @@ func (s *controllerSuite) TestShardControllerClosed() {
 				for shardID := int32(1); shardID <= numShards; shardID++ {
 					_, err := s.shardController.GetShardByID(shardID)
 					if err != nil {
-						s.logger.Error("ShardLost", tag.Error(err))
+						log.ErrorWithCode(s.logger, errorcode.ShardLost, "ShardLost", err)
 						shardLost = true
 					}
 					time.Sleep(20 * time.Millisecond)

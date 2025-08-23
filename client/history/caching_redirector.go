@@ -10,6 +10,7 @@ import (
 	"go.temporal.io/server/api/historyservice/v1"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/goro"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -202,6 +203,7 @@ func (r *cachingRedirector) handleSolError(opEntry cacheEntry, solErr *serviceer
 	solErrNewOwner := rpcAddress(solErr.OwnerHost)
 	if len(solErrNewOwner) != 0 && solErrNewOwner != opEntry.address {
 		r.logger.Info("historyClient: updating cache from shard ownership lost error",
+			tag.ErrorCode(errorcode.ClientClientHistoryError3),
 			tag.ShardID(opEntry.shardID),
 			tag.NewAnyTag("oldAddress", opEntry.address),
 			tag.NewAnyTag("newAddress", solErrNewOwner))
@@ -221,11 +223,11 @@ func maybeHostDownError(opErr error) bool {
 
 func (r *cachingRedirector) eventLoop(ctx context.Context) error {
 	if err := r.historyServiceResolver.AddListener(cachingRedirectorListener, r.membershipUpdateCh); err != nil {
-		r.logger.Fatal("Error adding listener", tag.Error(err))
+		log.FatalWithCode(r.logger, errorcode.ClientClientHistoryError, "Error adding listener", err)
 	}
 	defer func() {
 		if err := r.historyServiceResolver.RemoveListener(cachingRedirectorListener); err != nil {
-			r.logger.Warn("Error removing listener", tag.Error(err))
+			log.WarnWithCode(r.logger, errorcode.ClientClientHistoryError2, "Error removing listener", tag.Error(err))
 		}
 	}()
 

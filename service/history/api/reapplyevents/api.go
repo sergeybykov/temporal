@@ -8,6 +8,8 @@ import (
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/namespace"
@@ -143,7 +145,7 @@ func Invoke(
 				switch err.(type) {
 				case *serviceerror.InvalidArgument:
 					// no-op. Usually this is due to reset workflow with pending child workflows
-					shardContext.GetLogger().Warn("Cannot reset workflow. Ignoring reapply events.", tag.Error(err))
+					log.WarnWithCode(shardContext.GetLogger(), errorcode.HistoryHistoryReapplyeventsResetOperationFailed, "Cannot reset workflow. Ignoring reapply events.", tag.Error(err))
 				case nil:
 					// no-op
 				default:
@@ -163,7 +165,7 @@ func Invoke(
 				runID,
 			)
 			if err != nil {
-				shardContext.GetLogger().Error("failed to re-apply stale events", tag.Error(err))
+				log.ErrorWithCode(shardContext.GetLogger(), errorcode.HistoryHistoryReapplyeventsFailed, "failed to re-apply stale events", err)
 				return nil, err
 			}
 			if len(reappliedEvents) == 0 {

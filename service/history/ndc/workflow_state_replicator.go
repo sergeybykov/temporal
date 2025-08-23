@@ -26,6 +26,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/locks"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -458,7 +459,7 @@ func (r *WorkflowStateReplicatorImpl) deleteNewBranchWhenError(
 			ShardID:     r.shardContext.GetShardID(),
 			BranchToken: newBranchToken,
 		}); err != nil {
-			r.logger.Error("failed to clean up workflow execution", tag.Error(err))
+			log.ErrorWithCode(r.logger, errorcode.HistoryReplicationTaskExecutorOperationFailed, "failed to clean up workflow execution", err)
 		}
 	}
 }

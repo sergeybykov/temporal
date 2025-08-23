@@ -5,6 +5,7 @@ package queues
 import (
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -100,10 +101,9 @@ func NewScheduler(
 		} else {
 			// if namespace not found, treat it as active namespace and
 			// use default active namespace weight
-			logger.Warn("Unable to find namespace, using active namespace task channel weight",
+			log.WarnWithCode(logger, errorcode.HistoryHistoryQueuesError6, "Unable to find namespace, using active namespace task channel weight",
 				tag.WorkflowNamespaceID(key.NamespaceID),
-				tag.Error(err),
-			)
+				tag.Error(err))
 		}
 
 		weight, ok := configs.ConvertDynamicConfigValueToWeights(
@@ -111,11 +111,10 @@ func NewScheduler(
 			logger,
 		)[key.Priority]
 		if !ok || weight <= 0 {
-			logger.Warn("Task priority weight not specified or is invalid, using default weight",
+			log.WarnWithCode(logger, errorcode.HistorySchedulerCreationFailed, "Task priority weight not specified or is invalid, using default weight",
 				tag.TaskPriority(key.Priority.String()),
 				tag.NewInt("priority-weight", weight),
-				tag.NewInt("default-weight", configs.DefaultPriorityWeight),
-			)
+				tag.NewInt("default-weight", configs.DefaultPriorityWeight))
 			weight = configs.DefaultPriorityWeight
 		}
 		return weight
@@ -208,7 +207,7 @@ func NewRateLimitedScheduler(
 			timeSource,
 		)
 		if err != nil {
-			logger.Error("Failed to create delayed rate limited scheduler", tag.Error(err))
+			log.ErrorWithCode(logger, errorcode.HistorySchedulerCreationFailed, "Failed to create delayed rate limited scheduler", err)
 			return baseScheduler
 		}
 

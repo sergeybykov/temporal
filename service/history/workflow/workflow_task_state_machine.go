@@ -21,6 +21,8 @@ import (
 	taskqueuespb "go.temporal.io/server/api/taskqueue/v1"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/primitives/timestamp"
@@ -261,7 +263,7 @@ func (m *workflowTaskStateMachine) AddWorkflowTaskScheduleToStartTimeoutEvent(
 ) (*historypb.HistoryEvent, error) {
 	opTag := tag.WorkflowActionWorkflowTaskTimedOut
 	if m.ms.executionInfo.WorkflowTaskScheduledEventId != workflowTask.ScheduledEventID || m.ms.executionInfo.WorkflowTaskStartedEventId > 0 {
-		m.ms.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
+		log.WarnWithCode(m.ms.logger, errorcode.HistoryDataInconsistency, mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(m.ms.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.WorkflowScheduledEventID(workflowTask.ScheduledEventID),
@@ -302,7 +304,7 @@ func (m *workflowTaskStateMachine) AddWorkflowTaskScheduledEventAsHeartbeat(
 ) (*historyi.WorkflowTaskInfo, error) {
 	opTag := tag.WorkflowActionWorkflowTaskScheduled
 	if m.HasPendingWorkflowTask() {
-		m.ms.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
+		log.WarnWithCode(m.ms.logger, errorcode.HistoryDataInconsistency, mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(m.ms.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.WorkflowScheduledEventID(m.ms.executionInfo.WorkflowTaskScheduledEventId))
@@ -455,7 +457,7 @@ func (m *workflowTaskStateMachine) AddWorkflowTaskStartedEvent(
 	opTag := tag.WorkflowActionWorkflowTaskStarted
 	workflowTask := m.GetWorkflowTaskByID(scheduledEventID)
 	if workflowTask == nil || workflowTask.StartedEventID != common.EmptyEventID {
-		m.ms.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
+		log.WarnWithCode(m.ms.logger, errorcode.HistoryDataInconsistency, mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(m.ms.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.WorkflowScheduledEventID(scheduledEventID))
@@ -1294,7 +1296,7 @@ func (m *workflowTaskStateMachine) convertSpeculativeWorkflowTaskToNormal() erro
 		// Upon creation of the speculative workflow task, the workflowTaskUpdated flag should be set.
 		// The flag is only unset when closing the transaction, which we know haven't happened yet.
 		// So the workflowTaskUpdated flag should always be set here.
-		m.ms.logger.Warn("Speculative workflow task didn't set workflowTaskUpdated flag, likely due to a bug")
+		log.WarnWithCode(m.ms.logger, errorcode.HistoryDataInconsistency, "Speculative workflow task didn't set workflowTaskUpdated flag, likely due to a bug")
 		m.ms.workflowTaskUpdated = true
 	}
 

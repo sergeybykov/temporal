@@ -11,6 +11,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/cluster"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -186,7 +187,7 @@ func (r *taskProcessorManagerImpl) handleClusterMetadataUpdate(
 		}
 		sourceShardIds, err := r.taskPollerManager.getSourceClusterShardIDs(clusterName)
 		if err != nil {
-			r.logger.Error("Failed to get source shard id list", tag.Error(err), tag.ClusterName(clusterName))
+			log.ErrorWithCode(r.logger, errorcode.HistoryReplicationTaskProcessorOperationFailed, "Failed to get source shard id list", err, tag.ClusterName(clusterName))
 			continue
 		}
 		var processors []TaskProcessor
@@ -227,7 +228,7 @@ func (r *taskProcessorManagerImpl) completeReplicationTaskLoop() {
 		select {
 		case <-cleanupTimer.C:
 			if err := r.cleanupReplicationTasks(); err != nil {
-				r.logger.Error("Failed to clean up replication messages.", tag.Error(err))
+				log.ErrorWithCode(r.logger, errorcode.HistoryReplicationCleanupFailed, "Failed to clean up replication messages.", err)
 				metrics.ReplicationTaskCleanupFailure.With(r.metricsHandler).Record(
 					1,
 					metrics.OperationTag(metrics.ReplicationTaskCleanupScope),
@@ -336,7 +337,7 @@ func (r *taskProcessorManagerImpl) checkReplicationDLQSize() {
 			SourceClusterName: clusterName,
 		})
 		if err != nil {
-			r.logger.Error("Failed to check replication DLQ size.", tag.Error(err))
+			log.ErrorWithCode(r.logger, errorcode.HistoryReplicationDLQOperationFailed, "Failed to check replication DLQ size.", err)
 			return
 		}
 		if !isEmpty {

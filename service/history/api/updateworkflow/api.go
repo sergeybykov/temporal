@@ -17,6 +17,8 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/definition"
 	"go.temporal.io/server/common/effect"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
 	serviceerrors "go.temporal.io/server/common/serviceerror"
@@ -224,7 +226,7 @@ func (u *Updater) OnSuccess(
 		}
 
 		if err != nil {
-			u.shardCtx.GetLogger().Warn("Unable to add WorkflowTask directly to matching.",
+			log.WarnWithCode(u.shardCtx.GetLogger(), errorcode.HistoryHistoryUpdateworkflowError, "Unable to add WorkflowTask directly to matching.",
 				tag.WorkflowNamespace(u.req.Request.Namespace),
 				tag.WorkflowNamespaceID(u.wfKey.NamespaceID),
 				tag.WorkflowID(u.wfKey.WorkflowID),

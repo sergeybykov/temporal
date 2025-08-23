@@ -14,6 +14,7 @@ import (
 	replicationspb "go.temporal.io/server/api/replication/v1"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/channel"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -182,7 +183,7 @@ func (r *StreamReceiverImpl) sendEventLoop() error {
 			}
 			if watermark != inclusiveLowWatermark {
 				inclusiveLowWatermark = watermark
-				r.logger.Debug(fmt.Sprintf("StreamReceiver acked inclusiveLowWatermark %d", inclusiveLowWatermark))
+				r.logger.Debug(fmt.Sprintf("StreamReceiver acked inclusiveLowWatermark %d", inclusiveLowWatermark), tag.ErrorCode(errorcode.HistoryReplicationTaskProcessorOperationFailed))
 			}
 		case <-r.shutdownChan.Channel():
 			return nil
@@ -229,12 +230,12 @@ func (r *StreamReceiverImpl) ackMessage(
 			// we should avoid ack with {high: 10, low: nil}. If we do, sender will not able to correctly interpret the overall low watermark of the queue,
 			// because it is possible that low priority tracker might receive a batch of tasks with watermark 5 later.
 			// It is also true for the opposite case.
-			r.logger.Warn("Tiered stack mode. Have to wait for both high and low priority tracker received at least one batch of tasks before acking.")
+			log.WarnWithCode(r.logger, errorcode.HistoryReplicationTaskProcessorOperationFailed, "Tiered stack mode. Have to wait for both high and low priority tracker received at least one batch of tasks before acking.")
 			return 0, nil
 		}
 		highPriorityFlowControlCommand := r.flowController.GetFlowControlInfo(enumsspb.TASK_PRIORITY_HIGH)
 		if highPriorityFlowControlCommand == enumsspb.REPLICATION_FLOW_CONTROL_COMMAND_PAUSE {
-			r.logger.Warn(fmt.Sprintf("pausing High Priority Tasks, current size: %v, lowWatermark: %v", r.highPriorityTaskTracker.Size(), highPriorityWaterMarkInfo.Watermark))
+			log.WarnWithCode(r.logger, errorcode.HistoryReplicationTaskProcessorOperationFailed, fmt.Sprintf("pausing High Priority Tasks, current size: %v, lowWatermark: %v", r.highPriorityTaskTracker.Size(), highPriorityWaterMarkInfo.Watermark))
 		}
 		highPriorityWatermark = &replicationspb.ReplicationState{
 			InclusiveLowWatermark:     highPriorityWaterMarkInfo.Watermark,
@@ -243,7 +244,7 @@ func (r *StreamReceiverImpl) ackMessage(
 		}
 		lowPriorityFlowControlCommand := r.flowController.GetFlowControlInfo(enumsspb.TASK_PRIORITY_LOW)
 		if lowPriorityFlowControlCommand == enumsspb.REPLICATION_FLOW_CONTROL_COMMAND_PAUSE {
-			r.logger.Warn(fmt.Sprintf("pausing Low Priority Tasks, current size: %v, lowWatermark: %v", r.lowPriorityTaskTracker.Size(), lowPriorityWaterMarkInfo.Watermark))
+			log.WarnWithCode(r.logger, errorcode.HistoryReplicationTaskProcessorOperationFailed, fmt.Sprintf("pausing Low Priority Tasks, current size: %v, lowWatermark: %v", r.lowPriorityTaskTracker.Size(), lowPriorityWaterMarkInfo.Watermark))
 		}
 		lowPriorityWatermark = &replicationspb.ReplicationState{
 			InclusiveLowWatermark:     lowPriorityWaterMarkInfo.Watermark,

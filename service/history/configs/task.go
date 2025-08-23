@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/tasks"
@@ -41,7 +42,7 @@ func ConvertDynamicConfigValueToWeights(
 	for key, value := range weightsFromDC {
 		priority, ok := tasks.PriorityValue[key]
 		if !ok {
-			logger.Error("Unknown key for task priority name, fallback to default weights", tag.Key(key), tag.Value(value))
+			log.ErrorWithCode(logger, errorcode.HistoryTaskPriorityUnknownKey, "Unknown key for task priority name, fallback to default weights", nil, tag.Key(key), tag.Value(value))
 			return DefaultActiveTaskPriorityWeight
 		}
 
@@ -56,7 +57,7 @@ func ConvertDynamicConfigValueToWeights(
 		case int64:
 			intValue = int(value)
 		default:
-			logger.Error("Unknown type for task priority weight, fallback to default weights", tag.Key(key), tag.Value(value))
+			log.ErrorWithCode(logger, errorcode.HistoryTaskPriorityUnknownType, "Unknown type for task priority weight, fallback to default weights", nil, tag.Key(key), tag.Value(value))
 			return DefaultActiveTaskPriorityWeight
 		}
 		weights[priority] = intValue

@@ -11,8 +11,8 @@ import (
 	enumsspb "go.temporal.io/server/api/enums/v1"
 	replicationspb "go.temporal.io/server/api/replication/v1"
 	"go.temporal.io/server/client"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/persistence"
 	"go.temporal.io/server/service/history/deletemanager"
@@ -157,7 +157,7 @@ func (r *dlqHandlerImpl) PurgeMessages(
 		sourceCluster,
 		lastMessageID,
 	); err != nil {
-		r.logger.Error("Failed to purge history replication message", tag.Error(err))
+		log.ErrorWithCode(r.logger, errorcode.HistoryHistoryReplicationFailed, "Failed to purge history replication message", err)
 		// The update ack level should not block the call. Ignore the error.
 	}
 	return nil
@@ -217,7 +217,7 @@ func (r *dlqHandlerImpl) MergeMessages(
 		sourceCluster,
 		lastMessageID,
 	); err != nil {
-		r.logger.Error("Failed to purge history replication message", tag.Error(err))
+		log.ErrorWithCode(r.logger, errorcode.HistoryHistoryReplicationFailed2, "Failed to purge history replication message", err)
 		// The update ack level should not block the call. Ignore the error.
 	}
 	return token, nil
