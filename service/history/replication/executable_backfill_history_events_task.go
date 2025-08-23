@@ -10,7 +10,9 @@ import (
 	historyspb "go.temporal.io/server/api/history/v1"
 	replicationspb "go.temporal.io/server/api/replication/v1"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/namespace"
@@ -83,7 +85,7 @@ func (e *ExecutableBackfillHistoryEventsTask) Execute() error {
 	if nsError != nil {
 		return nsError
 	} else if !apply {
-		e.Logger.Warn("Skipping the replication task",
+		log.WarnWithCode(e.Logger, errorcode.HistoryHistoryReplicationFailed, "Skipping the replication task",
 			tag.WorkflowNamespaceID(e.NamespaceID),
 			tag.WorkflowID(e.WorkflowID),
 			tag.WorkflowRunID(e.RunID),
@@ -135,7 +137,7 @@ func (e *ExecutableBackfillHistoryEventsTask) HandleErr(err error) error {
 		e.MarkTaskDuplicated()
 		return nil
 	}
-	e.Logger.Error("BackFillHistoryEvent replication task encountered error",
+	log.ErrorWithCode(e.Logger, errorcode.HistoryHistoryReplicationError, "BackFillHistoryEvent replication task encountered error", err,
 		tag.WorkflowNamespaceID(e.NamespaceID),
 		tag.WorkflowID(e.WorkflowID),
 		tag.WorkflowRunID(e.RunID),
@@ -163,7 +165,7 @@ func (e *ExecutableBackfillHistoryEventsTask) HandleErr(err error) error {
 			ResendAttempt,
 		); syncStateErr != nil || !doContinue {
 			if syncStateErr != nil {
-				e.Logger.Error("BackFillHistoryEvent replication task encountered error during sync state",
+				log.ErrorWithCode(e.Logger, errorcode.HistoryHistoryReplicationError, "BackFillHistoryEvent replication task encountered error during sync state", syncStateErr,
 					tag.WorkflowNamespaceID(e.NamespaceID),
 					tag.WorkflowID(e.WorkflowID),
 					tag.WorkflowRunID(e.RunID),
@@ -212,7 +214,7 @@ func (e *ExecutableBackfillHistoryEventsTask) HandleErr(err error) error {
 		}
 		return e.Execute()
 	default:
-		e.Logger.Error("Backfill history events replication task encountered error",
+		log.ErrorWithCode(e.Logger, errorcode.HistoryHistoryReplicationError, "Backfill history events replication task encountered error", err,
 			tag.WorkflowNamespaceID(e.NamespaceID),
 			tag.WorkflowID(e.WorkflowID),
 			tag.WorkflowRunID(e.RunID),
@@ -228,7 +230,7 @@ func (e *ExecutableBackfillHistoryEventsTask) getDeserializedEvents() (_ [][]*hi
 	for _, eventsBlob := range e.taskAttr.EventBatches {
 		events, err := e.EventSerializer.DeserializeEvents(eventsBlob)
 		if err != nil {
-			e.Logger.Error("unable to deserialize history events",
+			log.ErrorWithCode(e.Logger, errorcode.HistoryHistoryReplicationError, "unable to deserialize history events", err,
 				tag.WorkflowNamespaceID(e.NamespaceID),
 				tag.WorkflowID(e.WorkflowID),
 				tag.WorkflowRunID(e.RunID),
@@ -242,7 +244,7 @@ func (e *ExecutableBackfillHistoryEventsTask) getDeserializedEvents() (_ [][]*hi
 
 	newRunEvents, err := e.EventSerializer.DeserializeEvents(e.taskAttr.NewRunInfo.EventBatch)
 	if err != nil {
-		e.Logger.Error("unable to deserialize new run history events",
+		log.ErrorWithCode(e.Logger, errorcode.HistoryHistoryReplicationError, "unable to deserialize new run history events", err,
 			tag.WorkflowNamespaceID(e.NamespaceID),
 			tag.WorkflowID(e.WorkflowID),
 			tag.WorkflowRunID(e.RunID),

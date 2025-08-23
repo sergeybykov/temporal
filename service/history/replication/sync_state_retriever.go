@@ -15,6 +15,7 @@ import (
 	"go.temporal.io/server/chasm"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/locks"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -281,11 +282,11 @@ func (s *SyncStateRetrieverImpl) getSyncStateResult(
 	result.VersionedTransitionHistory = sourceTransitionHistory
 	currentVersionHistory, err := versionhistory.GetCurrentVersionHistory(sourceVersionHistories)
 	if err != nil {
-		s.logger.Error("SyncWorkflowState failed to get current version history and update progress cache",
+		log.ErrorWithCode(s.logger, errorcode.HistorySyncWorkflowStateRetrieveFailed, "SyncWorkflowState failed to get current version history and update progress cache", err,
 			tag.WorkflowNamespaceID(namespaceID),
 			tag.WorkflowID(execution.WorkflowId),
 			tag.WorkflowRunID(execution.RunId),
-			tag.Error(err))
+			tag.ErrorCode(errorcode.VersionHistoryGetFailed))
 		return result, nil
 	}
 	result.SyncedVersionHistory = currentVersionHistory
@@ -318,6 +319,7 @@ func (s *SyncStateRetrieverImpl) getNewRunInfo(ctx context.Context, namespaceId 
 	case nil:
 	case *serviceerror.NotFound:
 		s.logger.Info("SyncWorkflowState new run not found",
+			tag.ErrorCode(errorcode.HistoryWorkflowNotFound),
 			tag.WorkflowNewRunID(newRunId),
 			tag.WorkflowNamespaceID(namespaceId.String()),
 			tag.WorkflowID(execution.WorkflowId),
@@ -343,6 +345,7 @@ func (s *SyncStateRetrieverImpl) getNewRunInfo(ctx context.Context, namespaceId 
 	case nil:
 	case *serviceerror.NotFound:
 		s.logger.Info("SyncWorkflowState new run event not found",
+			tag.ErrorCode(errorcode.HistoryWorkflowNotFound),
 			tag.WorkflowNewRunID(newRunId),
 			tag.WorkflowNamespaceID(namespaceId.String()),
 			tag.WorkflowID(execution.WorkflowId),
@@ -353,6 +356,7 @@ func (s *SyncStateRetrieverImpl) getNewRunInfo(ctx context.Context, namespaceId 
 	}
 	if len(newRunEvents) == 0 {
 		s.logger.Info("SyncWorkflowState new run event is empty",
+			tag.ErrorCode(errorcode.HistoryWorkflowNotFound),
 			tag.WorkflowNewRunID(newRunId),
 			tag.WorkflowNamespaceID(namespaceId.String()),
 			tag.WorkflowID(execution.WorkflowId),
@@ -448,13 +452,14 @@ func (s *SyncStateRetrieverImpl) getEventsBlob(
 			}
 			left := endEventId - startEventId
 			if !isNewRun && int64(len(xdcCacheValue.EventBlobs)) > left {
-				s.logger.Error(
+				log.ErrorWithCode(s.logger, errorcode.HistorySyncWorkflowStateRetrieveFailed,
 					fmt.Sprintf("xdc cached events are truncated, want [%d, %d), got [%d, %d) from cache",
-						startEventId, endEventId, startEventId, xdcCacheValue.NextEventID),
+						startEventId, endEventId, startEventId, xdcCacheValue.NextEventID), nil,
 					tag.FirstEventVersion(eventVersion),
 					tag.WorkflowNamespaceID(workflowKey.NamespaceID),
 					tag.WorkflowID(workflowKey.WorkflowID),
 					tag.WorkflowRunID(workflowKey.RunID),
+					tag.ErrorCode(errorcode.XDCCacheEventsTruncated),
 				)
 				eventBlobs = append(eventBlobs, xdcCacheValue.EventBlobs[:left]...)
 				return eventBlobs, nil

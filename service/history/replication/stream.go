@@ -10,6 +10,7 @@ import (
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/channel"
 	"go.temporal.io/server/common/cluster"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -72,7 +73,7 @@ func WrapEventLoop(
 					metrics.FromClusterIDTag(fromClusterKey.ClusterID),
 					metrics.ToClusterIDTag(toClusterKey.ClusterID),
 				)
-				logger.Warn("ReplicationStreamError", tag.Error(err))
+				log.WarnWithCode(logger, errorcode.StreamCloseError, "ReplicationStreamError", tag.Error(err))
 			} else {
 				metrics.ReplicationServiceError.With(metricsHandler).Record(
 					int64(1),
@@ -80,7 +81,7 @@ func WrapEventLoop(
 					metrics.FromClusterIDTag(fromClusterKey.ClusterID),
 					metrics.ToClusterIDTag(toClusterKey.ClusterID),
 				)
-				logger.Error("ReplicationServiceError", tag.Error(err))
+				log.ErrorWithCode(logger, errorcode.HistoryHistoryReplicationError, "ReplicationServiceError", err)
 			}
 			return err
 		}
@@ -109,7 +110,7 @@ func livenessMonitor(
 			case <-signalChan:
 				continue
 			default:
-				logger.Warn("No liveness signal received. Stop the replication stream.")
+				log.WarnWithCode(logger, errorcode.StreamCloseError, "No liveness signal received. Stop the replication stream.")
 				stopStream()
 				return
 			}

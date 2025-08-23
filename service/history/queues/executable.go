@@ -23,6 +23,7 @@ import (
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -277,7 +278,7 @@ func (e *executableImpl) Execute() (retErr error) {
 
 		if telemetry.DebugMode() {
 			if taskPayload, err := json.Marshal(e.GetTask()); err != nil {
-				e.logger.Error("failed to serialize task payload for OTEL span", tag.Error(err))
+				log.ErrorWithCode(e.logger, errorcode.HistoryTaskPayloadSerializationFailed, "failed to serialize task payload for OTEL span", err)
 			} else {
 				span.SetAttributes(attribute.Key("queue.task.payload").String(string(taskPayload)))
 			}
@@ -298,7 +299,7 @@ func (e *executableImpl) Execute() (retErr error) {
 				err = serviceerror.NewInternalf("panic: %v", pObj)
 			}
 
-			e.logger.Error("Panic is captured", tag.SysStackTrace(string(debug.Stack())), tag.Error(err))
+			log.ErrorWithCode(e.logger, errorcode.HistoryQueueExecutablePanicCaptured, "Panic is captured", err, tag.SysStackTrace(string(debug.Stack())))
 			retErr = err
 
 			// we need to guess the metrics tags here as we don't know which execution logic
@@ -340,10 +341,8 @@ func (e *executableImpl) Execute() (retErr error) {
 			return e.writeToDLQ(ctx)
 		}
 		if errors.As(e.terminalFailureCause, new(MaybeTerminalTaskError)) {
-			e.logger.Warn(
-				"Dropping task with terminal failure because DLQ was disabled",
-				tag.Error(e.terminalFailureCause),
-			)
+			log.WarnWithCode(e.logger, errorcode.HistoryTaskProcessingFailed, "Dropping task with terminal failure because DLQ was disabled",
+				tag.Error(e.terminalFailureCause))
 			return nil
 		}
 		e.logger.Info("Retrying task with non-terminal DLQ failure because DLQ was disabled", tag.Error(e.terminalFailureCause))
@@ -379,7 +378,7 @@ func (e *executableImpl) writeToDLQ(ctx context.Context) error {
 	)
 	if err != nil {
 		metrics.TaskDLQFailures.With(e.metricsHandler).Record(1)
-		e.logger.Error("Failed to write task to DLQ", tag.Error(err))
+		log.ErrorWithCode(e.logger, errorcode.HistoryTaskProcessingFailed, "Failed to write task to DLQ", err)
 	}
 	metrics.TaskDLQSendLatency.With(e.metricsHandler).Record(e.timeSource.Now().Sub(start))
 	return err
@@ -540,9 +539,9 @@ func (e *executableImpl) HandleErr(err error) (retErr error) {
 		tag.LifeCycleProcessingFailed,
 	)
 	if attempt > taskCriticalLogMetricAttempts {
-		logger.Error("Critical error processing task, retrying.", tag.OperationCritical)
+		log.ErrorWithCode(logger, errorcode.HistoryTaskProcessingFailed, "Critical error processing task, retrying.", nil, tag.OperationCritical)
 	} else {
-		logger.Warn("Fail to process task")
+		log.WarnWithCode(logger, errorcode.HistoryTaskProcessingFailed, "Fail to process task")
 	}
 
 	if e.isUnexpectedNonRetryableError(err) {
@@ -552,20 +551,20 @@ func (e *executableImpl) HandleErr(err error) (retErr error) {
 		metrics.TaskCorruptionCounter.With(e.metricsHandler).Record(1)
 		if e.dlqEnabled() {
 			// Keep this message in sync with the log line mentioned in Investigation section of docs/admin/dlq.md
-			e.logger.Error("Marking task as terminally failed, will send to DLQ", tag.Error(err), tag.ErrorType(err))
+			log.ErrorWithCode(e.logger, errorcode.HistoryTaskProcessingFailed, "Marking task as terminally failed, will send to DLQ", err, tag.ErrorType(err))
 			e.terminalFailureCause = err // <- Execute() examines this attribute on the next attempt.
 			metrics.TaskTerminalFailures.With(e.metricsHandler).Record(1)
 			return fmt.Errorf("%w: %v", ErrTerminalTaskFailure, err)
 		}
-		e.logger.Error("Dropping task due to terminal error", tag.Error(err), tag.ErrorType(err))
+		log.ErrorWithCode(e.logger, errorcode.HistoryTaskProcessingFailed, "Dropping task due to terminal error", err, tag.ErrorType(err))
 		return nil
 	}
 
 	// Unexpected but retryable error
 	if e.unexpectedErrorAttempts >= e.maxUnexpectedErrorAttempts() && e.dlqEnabled() {
 		// Keep this message in sync with the log line mentioned in Investigation section of docs/admin/dlq.md
-		e.logger.Error("Marking task as terminally failed, will send to DLQ. Maximum number of attempts with unexpected errors",
-			tag.UnexpectedErrorAttempts(int32(e.unexpectedErrorAttempts)), tag.Error(err))
+		log.ErrorWithCode(e.logger, errorcode.HistoryTaskProcessingFailed, "Marking task as terminally failed, will send to DLQ. Maximum number of attempts with unexpected errors", err,
+			tag.UnexpectedErrorAttempts(int32(e.unexpectedErrorAttempts)))
 		e.terminalFailureCause = err // <- Execute() examines this attribute on the next attempt.
 		metrics.TaskTerminalFailures.With(e.metricsHandler).Record(1)
 		return fmt.Errorf("%w: %w", ErrTerminalTaskFailure, e.terminalFailureCause)
@@ -580,17 +579,17 @@ func (e *executableImpl) matchDLQErrorPattern(err error) error {
 	}
 	match, mErr := regexp.MatchString(e.dlqErrorPattern(), err.Error())
 	if mErr != nil {
-		e.logger.Error(fmt.Sprintf("Failed to match task processing error with %s", dynamicconfig.HistoryTaskDLQErrorPattern.Key()))
+		log.ErrorWithCode(e.logger, errorcode.HistoryTaskProcessingFailed, fmt.Sprintf("Failed to match task processing error with %s", dynamicconfig.HistoryTaskDLQErrorPattern.Key()), mErr)
 		return nil
 	}
 	if !match {
 		return nil
 	}
 
-	e.logger.Error(
+	log.ErrorWithCode(e.logger, errorcode.HistoryTaskProcessingFailed,
 		fmt.Sprintf("Error matches with %s. Marking task as terminally failed, will send to DLQ",
 			dynamicconfig.HistoryTaskDLQErrorPattern.Key()),
-		tag.Error(err),
+		err,
 		tag.ErrorType(err))
 	e.terminalFailureCause = err
 	metrics.TaskTerminalFailures.With(e.metricsHandler).Record(1)

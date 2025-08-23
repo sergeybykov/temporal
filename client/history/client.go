@@ -15,6 +15,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/debug"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -145,7 +146,7 @@ func (c *clientImpl) GetReplicationMessages(
 			defer cancel()
 			resp, err := client.GetReplicationMessages(ctx, request, opts...)
 			if err != nil {
-				c.logger.Warn("Failed to get replication tasks from client", tag.Error(err))
+				log.WarnWithCode(c.logger, errorcode.ClientClientHistoryFailed, "Failed to get replication tasks from client", tag.Error(err))
 				// Returns service busy error to notify replication
 				if _, ok := err.(*serviceerror.ResourceExhausted); ok {
 					select {

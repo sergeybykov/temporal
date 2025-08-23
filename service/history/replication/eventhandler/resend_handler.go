@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
@@ -252,11 +253,11 @@ func (r *resendHandlerImpl) replicateRemoteGeneratedEvents(
 			"",
 		)
 		if err != nil && !errors.Is(err, consts.ErrDuplicate) {
-			r.logger.Error("failed to replicate events",
+			log.ErrorWithCode(r.logger, errorcode.HistoryReplicationTaskProcessorOperationFailed, "failed to replicate events", err,
 				tag.WorkflowNamespaceID(namespaceID.String()),
 				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID),
-				tag.Error(err))
+				tag.ErrorCode(errorcode.EventReplicationFailed),
+				tag.WorkflowRunID(runID))
 			return err
 		}
 		eventsBatch = nil
@@ -268,11 +269,11 @@ func (r *resendHandlerImpl) replicateRemoteGeneratedEvents(
 	for historyBatchIterator.HasNext() {
 		batch, err := historyBatchIterator.Next()
 		if err != nil {
-			r.logger.Error("failed to get history events",
+			log.ErrorWithCode(r.logger, errorcode.HistoryReplicationTaskProcessorOperationFailed, "failed to get history events", err,
 				tag.WorkflowNamespaceID(namespaceID.String()),
 				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID),
-				tag.Error(err))
+				tag.ErrorCode(errorcode.HistoryEventGetFailed),
+				tag.WorkflowRunID(runID))
 			return err
 		}
 		events, err := r.serializer.DeserializeEvents(batch.RawEventBatch)

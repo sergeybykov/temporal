@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	ctasks "go.temporal.io/server/common/tasks"
@@ -71,7 +73,7 @@ func (e *ExecutableUnknownTask) IsRetryableError(err error) bool {
 }
 
 func (e *ExecutableUnknownTask) MarkPoisonPill() error {
-	e.Logger.Error("unable to enqueue unknown replication task to DLQ",
+	log.ErrorWithCode(e.Logger, errorcode.HistoryHistoryReplicationError, "unable to enqueue unknown replication task to DLQ", nil,
 		tag.Task(e.task),
 		tag.TaskID(e.ExecutableTask.TaskID()),
 	)

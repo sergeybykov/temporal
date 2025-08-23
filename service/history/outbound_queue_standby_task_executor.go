@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.temporal.io/server/chasm"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -141,7 +142,7 @@ func (e *outboundQueueStandbyTaskExecutor) executeStateMachineTask(
 	discardTime := task.GetVisibilityTime().Add(e.config.OutboundStandbyTaskMissingEventsDiscardDelay(nsName, destination))
 	// now > task start time + discard delay
 	if e.Now().After(discardTime) {
-		e.logger.Warn("Discarding standby outbound task due to task being pending for too long.", tag.Task(task))
+		log.WarnWithCode(e.logger, errorcode.HistoryOutboundTaskExecutorFailed, "Discarding standby outbound task due to task being pending for too long.", tag.Task(task))
 		return consts.ErrTaskDiscarded
 	}
 

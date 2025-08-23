@@ -16,6 +16,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/failure"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -162,7 +163,7 @@ Loop:
 		timerInfo, ok := mutableState.GetUserTimerInfoByEventID(timerSequenceID.EventID)
 		if !ok {
 			errString := fmt.Sprintf("failed to find in user timer event ID: %v", timerSequenceID.EventID)
-			t.logger.Error(errString)
+			log.ErrorWithCode(t.logger, errorcode.HistoryDataInconsistency, errString, nil)
 			return serviceerror.NewInternal(errString)
 		}
 
@@ -533,6 +534,7 @@ func (t *timerQueueActiveTaskExecutor) executeActivityRetryTimerTask(
 
 	if task.Attempt < activityInfo.Attempt || activityInfo.StartedEventId != common.EmptyEventID {
 		t.logger.Info("Duplicate activity retry timer task",
+			tag.ErrorCode(errorcode.HistoryTaskProcessingFailed),
 			tag.WorkflowID(mutableState.GetExecutionInfo().WorkflowId),
 			tag.WorkflowRunID(mutableState.GetExecutionState().GetRunId()),
 			tag.WorkflowNamespaceID(mutableState.GetExecutionInfo().NamespaceId),

@@ -16,6 +16,7 @@ import (
 	chasmworkflow "go.temporal.io/server/chasm/lib/workflow"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/locks"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -591,19 +592,17 @@ func convertGetHistoryError(
 	switch err.(type) {
 	case *serviceerror.NotFound:
 		// bypass this corrupted workflow to unblock the replication queue.
-		logger.Error("Cannot get history from missing workflow",
+		log.ErrorWithCode(logger, errorcode.HistoryReplicationTaskConversionFailed, "Cannot get history from missing workflow", err,
 			tag.WorkflowNamespaceID(workflowKey.NamespaceID),
 			tag.WorkflowID(workflowKey.WorkflowID),
-			tag.WorkflowRunID(workflowKey.RunID),
-			tag.Error(err))
+			tag.WorkflowRunID(workflowKey.RunID))
 		return nil
 	case *serviceerror.DataLoss:
 		// bypass this corrupted workflow to unblock the replication queue.
-		logger.Error("Cannot get history from corrupted workflow",
+		log.ErrorWithCode(logger, errorcode.HistoryReplicationTaskConversionFailed, "Cannot get history from corrupted workflow", err,
 			tag.WorkflowNamespaceID(workflowKey.NamespaceID),
 			tag.WorkflowID(workflowKey.WorkflowID),
-			tag.WorkflowRunID(workflowKey.RunID),
-			tag.Error(err))
+			tag.WorkflowRunID(workflowKey.RunID))
 		return nil
 	default:
 		return err
@@ -854,6 +853,7 @@ func (c *syncVersionedTransitionTaskConverter) convertTaskEquivalents(
 	if len(taskInfo.TaskEquivalents) == 0 {
 		// no task equivalents, nothing to do
 		c.logger.Info("No task equivalents for sync versioned transition task, dropping the task.",
+			tag.ErrorCode(errorcode.HistoryConditionFailed),
 			tag.WorkflowNamespaceID(taskInfo.NamespaceID),
 			tag.WorkflowID(taskInfo.WorkflowID),
 			tag.WorkflowRunID(taskInfo.RunID),

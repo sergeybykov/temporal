@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -100,7 +101,7 @@ func (q *DLQWriter) WriteTaskToDLQ(
 	ns, err := q.namespaceRegistry.GetNamespaceByID(namespace.ID(task.GetNamespaceID()))
 	var namespaceTag tag.Tag
 	if err != nil {
-		q.logger.Warn("Failed to get namespace name while trying to write a task to DLQ",
+		log.WarnWithCode(q.logger, errorcode.HistoryReplicationDLQOperationFailed, "Failed to get namespace name while trying to write a task to DLQ",
 			tag.WorkflowNamespace(task.GetNamespaceID()),
 			tag.Error(err),
 		)
@@ -108,7 +109,7 @@ func (q *DLQWriter) WriteTaskToDLQ(
 	} else {
 		namespaceTag = tag.WorkflowNamespace(string(ns.Name()))
 	}
-	q.logger.Warn("Task enqueued to DLQ",
+	log.WarnWithCode(q.logger, errorcode.HistoryReplicationDLQOperationFailed, "Task enqueued to DLQ",
 		tag.DLQMessageID(resp.Metadata.ID),
 		tag.SourceCluster(sourceCluster),
 		tag.TargetCluster(targetCluster),

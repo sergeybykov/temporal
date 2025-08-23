@@ -8,6 +8,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/collection"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -94,7 +95,7 @@ func (q *memoryScheduledQueue) Stop() {
 	close(q.shutdownCh)
 
 	if success := common.AwaitWaitGroup(&q.shutdownWG, time.Minute); !success {
-		q.logger.Warn("", tag.LifeCycleStopTimedout)
+		log.WarnWithCode(q.logger, errorcode.InfraServiceShutdownFailed, "Memory scheduled queue shutdown timed out", tag.LifeCycleStopTimedout)
 	}
 }
 

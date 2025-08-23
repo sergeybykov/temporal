@@ -3,6 +3,7 @@ package queues
 import (
 	"context"
 
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -58,7 +59,7 @@ func (e *activeStandbyExecutor) isActiveTask(
 	namespaceID := executable.GetNamespaceID()
 	entry, err := e.registry.GetNamespaceByID(namespace.ID(namespaceID))
 	if err != nil {
-		e.logger.Warn("Unable to find namespace, process task as active.", tag.WorkflowNamespaceID(namespaceID), tag.Value(executable.GetTask()))
+		log.WarnWithCode(e.logger, errorcode.HistoryTaskProcessingFailed, "Unable to find namespace, process task as active.", tag.WorkflowNamespaceID(namespaceID), tag.Value(executable.GetTask()))
 		return true
 	}
 

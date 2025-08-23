@@ -11,6 +11,7 @@ import (
 	"go.temporal.io/server/api/historyservice/v1"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
@@ -100,11 +101,11 @@ func (e *eventImporterImpl) ImportHistoryEventsFromBeginning(
 	for historyIterator.HasNext() {
 		batch, err := historyIterator.Next()
 		if err != nil {
-			e.logger.Error("failed to get history events",
+			log.ErrorWithCode(e.logger, errorcode.HistoryReplicationTaskProcessorOperationFailed, "failed to get history events", err,
 				tag.WorkflowNamespaceID(workflowKey.NamespaceID),
 				tag.WorkflowID(workflowKey.WorkflowID),
-				tag.WorkflowRunID(workflowKey.RunID),
-				tag.Error(err))
+				tag.ErrorCode(errorcode.HistoryEventGetFailed),
+				tag.WorkflowRunID(workflowKey.RunID))
 			return err
 		}
 
@@ -144,11 +145,11 @@ func (e *eventImporterImpl) ImportHistoryEventsFromBeginning(
 	// call with empty event blob to commit the import
 	response, err := invokeImportWorkflowExecutionCall(ctx, engine, workflowKey, blobs, versionHistory, token, e.logger)
 	if err != nil || len(response.Token) != 0 {
-		e.logger.Error("failed to commit import action",
+		log.ErrorWithCode(e.logger, errorcode.HistoryReplicationTaskProcessorOperationFailed, "failed to commit import action", err,
 			tag.WorkflowNamespaceID(workflowKey.NamespaceID),
 			tag.WorkflowID(workflowKey.WorkflowID),
-			tag.WorkflowRunID(workflowKey.RunID),
-			tag.Error(err))
+			tag.ErrorCode(errorcode.ImportActionCommitFailed),
+			tag.WorkflowRunID(workflowKey.RunID))
 		return serviceerror.NewInternal("Failed to commit import transaction")
 	}
 	return nil

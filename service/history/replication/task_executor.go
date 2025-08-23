@@ -11,6 +11,7 @@ import (
 	enumsspb "go.temporal.io/server/api/enums/v1"
 	"go.temporal.io/server/api/historyservice/v1"
 	replicationspb "go.temporal.io/server/api/replication/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/locks"
 	"go.temporal.io/server/common/log"
@@ -93,7 +94,7 @@ func (e *taskExecutorImpl) Execute(
 		err = e.handleSyncWorkflowStateTask(ctx, replicationTask, forceApply)
 	default:
 		// NOTE: not handling SyncHSMTask in this deprecated code path, task will go to DLQ
-		e.logger.Error("Unknown replication task type.", tag.ReplicationTask(replicationTask))
+		log.ErrorWithCode(e.logger, errorcode.HistoryReplicationTaskExecutorOperationFailed, "Unknown replication task type.", nil, tag.ReplicationTask(replicationTask))
 		err = ErrUnknownReplicationTask
 	}
 
@@ -185,7 +186,7 @@ func (e *taskExecutorImpl) handleActivityTask(
 		case nil:
 			// no-op
 		default:
-			e.logger.Error("error resend history for history event", tag.Error(resendErr))
+			log.ErrorWithCode(e.logger, errorcode.HistoryReplicationTaskExecutorOperationFailed, "error resend history for history event", resendErr)
 			return err
 		}
 		// This might be extra cost if the workflow belongs to local shard.
@@ -277,7 +278,7 @@ func (e *taskExecutorImpl) handleHistoryReplicationTask(
 		case nil:
 			// no-op
 		default:
-			e.logger.Error("error resend history for history event", tag.Error(resendErr))
+			log.ErrorWithCode(e.logger, errorcode.HistoryReplicationTaskExecutorOperationFailed, "error resend history for history event", resendErr)
 			return err
 		}
 
@@ -341,7 +342,7 @@ func (e *taskExecutorImpl) handleSyncWorkflowStateTask(
 			_, err = e.shardContext.GetHistoryClient().ReplicateWorkflowState(ctx, request)
 			return err
 		default:
-			e.logger.Error("error resend history for replicate workflow state", tag.Error(resendErr))
+			log.ErrorWithCode(e.logger, errorcode.HistoryReplicationTaskExecutorOperationFailed, "error resend history for replicate workflow state", resendErr)
 			return err
 		}
 	default:

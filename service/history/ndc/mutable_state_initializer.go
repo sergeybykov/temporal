@@ -11,9 +11,9 @@ import (
 	"go.temporal.io/api/serviceerror"
 	persistencespb "go.temporal.io/server/api/persistence/v1"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/locks"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/persistence/serialization"
 	historyi "go.temporal.io/server/service/history/interfaces"
@@ -196,10 +196,7 @@ func (r *MutableStateInitializerImpl) flushBufferEvents(
 	flusher := NewBufferEventFlusher(r.shardContext, wfContext, mutableState, r.logger)
 	_, mutableState, err := flusher.flush(ctx)
 	if err != nil {
-		r.logger.Error(
-			"MutableStateMapping::FlushBufferEvents unable to flush buffer events",
-			tag.Error(err),
-		)
+		log.ErrorWithCode(r.logger, errorcode.HistoryReplicationTaskExecutorOperationFailed, "MutableStateMapping::FlushBufferEvents unable to flush buffer events", err)
 		return nil, err
 	}
 	return mutableState, err

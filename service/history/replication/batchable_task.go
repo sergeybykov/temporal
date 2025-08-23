@@ -6,6 +6,7 @@ import (
 
 	replicationspb "go.temporal.io/server/api/replication/v1"
 	"go.temporal.io/server/common/backoff"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -112,7 +113,7 @@ func (w *batchedTask) Nack(err error) {
 	if len(w.individualTasks) == 1 {
 		w.batchedTask.Nack(err)
 	} else {
-		w.logger.Warn("Failed to process batched replication task", tag.Error(err))
+		log.WarnWithCode(w.logger, errorcode.HistoryHistoryReplicationFailed, "Failed to process batched replication task", tag.Error(err))
 		w.handleIndividualTasks()
 	}
 }

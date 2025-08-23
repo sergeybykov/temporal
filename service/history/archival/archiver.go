@@ -15,6 +15,7 @@ import (
 	archiverspb "go.temporal.io/server/api/archiver/v1"
 	carchiver "go.temporal.io/server/common/archiver"
 	"go.temporal.io/server/common/archiver/provider"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -128,7 +129,7 @@ func (a *archiver) Archive(ctx context.Context, request *Request) (res *Response
 				status = "rate_limit_exceeded"
 			}
 
-			logger.Warn("failed to archive workflow", tag.Error(err))
+			log.WarnWithCode(logger, errorcode.HistoryArchivalWorkflowFailed, "failed to archive workflow", tag.Error(err))
 		}
 
 		metrics.ArchiverArchiveLatency.With(metricsScope).
@@ -257,7 +258,7 @@ func (a *archiver) recordArchiveTargetResult(logger log.Logger, startTime time.T
 	if *err != nil {
 		status = "err"
 
-		logger.Error("failed to archive target", tag.NewStringTag("target", string(target)), tag.Error(*err))
+		log.ErrorWithCode(logger, errorcode.HistoryArchiveTargetFailed, "failed to archive target", *err, tag.NewStringTag("target", string(target)))
 	}
 
 	tags := []metrics.Tag{

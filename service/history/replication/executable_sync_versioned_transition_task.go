@@ -9,7 +9,9 @@ import (
 	historyspb "go.temporal.io/server/api/history/v1"
 	replicationspb "go.temporal.io/server/api/replication/v1"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/namespace"
@@ -77,7 +79,7 @@ func (e *ExecutableSyncVersionedTransitionTask) Execute() error {
 	if nsError != nil {
 		return nsError
 	} else if !apply {
-		e.Logger.Warn("Skipping the replication task",
+		log.WarnWithCode(e.Logger, errorcode.HistoryHistoryReplicationFailed, "Skipping the replication task",
 			tag.WorkflowNamespaceID(e.NamespaceID),
 			tag.WorkflowID(e.WorkflowID),
 			tag.WorkflowRunID(e.RunID),
@@ -112,7 +114,7 @@ func (e *ExecutableSyncVersionedTransitionTask) HandleErr(err error) error {
 		e.MarkTaskDuplicated()
 		return nil
 	}
-	e.Logger.Error("SyncVersionedTransition replication task encountered error",
+	log.ErrorWithCode(e.Logger, errorcode.HistoryHistoryReplicationError, "SyncVersionedTransition replication task encountered error", err,
 		tag.WorkflowNamespaceID(e.NamespaceID),
 		tag.WorkflowID(e.WorkflowID),
 		tag.WorkflowRunID(e.RunID),
@@ -138,7 +140,7 @@ func (e *ExecutableSyncVersionedTransitionTask) HandleErr(err error) error {
 			ResendAttempt,
 		); syncStateErr != nil || !doContinue {
 			if syncStateErr != nil {
-				e.Logger.Error("SyncVersionedTransition replication task encountered error during sync state",
+				log.ErrorWithCode(e.Logger, errorcode.HistoryHistoryReplicationError, "SyncVersionedTransition replication task encountered error during sync state", syncStateErr,
 					tag.WorkflowNamespaceID(e.NamespaceID),
 					tag.WorkflowID(e.WorkflowID),
 					tag.WorkflowRunID(e.RunID),

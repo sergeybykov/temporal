@@ -8,6 +8,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	enumsspb "go.temporal.io/server/api/enums/v1"
 	persistencespb "go.temporal.io/server/api/persistence/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -90,11 +91,11 @@ func loadMutableStateForTransferTask(
 			case *serviceerror.NotFound:
 				// NotFound error will be ignored by task error handling logic, so log it here
 				// for transfer tasks, mutable state should always be available
-				logger.Warn("Transfer Task Processor: workflow mutable state not found, skip.")
+				log.WarnWithCode(logger, errorcode.HistoryTransferRequestCancelFailed, "Transfer Task Processor: workflow mutable state not found, skip.")
 			case *serviceerror.NamespaceNotFound:
 				// NamespaceNotFound error will be ignored by task error handling logic, so log it here
 				// for transfer tasks, namespace should always be available.
-				logger.Warn("Transfer Task Processor: namespace not found, skip.")
+				log.WarnWithCode(logger, errorcode.HistoryTransferRequestCancelFailed, "Transfer Task Processor: namespace not found, skip.")
 			}
 		}
 	}
@@ -195,6 +196,7 @@ func loadMutableStateForTask(
 	getNamespaceTagByID(shardContext.GetNamespaceRegistry(), task.GetNamespaceID())
 	metrics.TaskSkipped.With(metricsHandler).Record(1, getNamespaceTagByID(shardContext.GetNamespaceRegistry(), task.GetNamespaceID()), metrics.TaskTypeTag(taskTypeTag))
 	logger.Info("Task processor skipping task: task event ID >= MS NextEventID.",
+		tag.ErrorCode(errorcode.HistoryTaskProcessingFailed),
 		tag.WorkflowNextEventID(mutableState.GetNextEventID()),
 	)
 	return nil, nil

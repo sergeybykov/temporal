@@ -10,8 +10,10 @@ import (
 	historyspb "go.temporal.io/server/api/history/v1"
 	"go.temporal.io/server/api/historyservice/v1"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/failure"
 	"go.temporal.io/server/common/headers"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/namespace"
@@ -85,9 +87,8 @@ func GetRawHistory(
 	); err != nil {
 		metricsHandler := interceptor.GetMetricsHandlerFromContext(ctx, logger).WithTags(metrics.OperationTag(metrics.HistoryGetHistoryScope))
 		metrics.ServiceErrIncompleteHistoryCounter.With(metricsHandler).Record(1)
-		logger.Error("getHistory: incomplete history",
-			tag.WorkflowBranchToken(branchToken),
-			tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.HistoryAPIGetHistoryUtilityOperationFailed, "getHistory: incomplete history", err,
+			tag.WorkflowBranchToken(branchToken))
 	}
 
 	metricsHandler := interceptor.GetMetricsHandlerFromContext(ctx, shardContext.GetLogger()).WithTags(metrics.OperationTag(metrics.HistoryGetHistoryScope))
@@ -98,11 +99,10 @@ func GetRawHistory(
 			logger := shardContext.GetLogger()
 			metricsHandler := interceptor.GetMetricsHandlerFromContext(ctx, logger).WithTags(metrics.OperationTag(metrics.HistoryGetRawHistoryScope))
 			metrics.ServiceErrIncompleteHistoryCounter.With(metricsHandler).Record(1)
-			logger.Error("getHistory error",
+			log.ErrorWithCode(logger, errorcode.HistoryAPIGetHistoryUtilityOperationFailed, "getHistory error", err,
 				tag.WorkflowNamespaceID(namespaceID.String()),
 				tag.WorkflowID(execution.GetWorkflowId()),
-				tag.WorkflowRunID(execution.GetRunId()),
-				tag.Error(err))
+				tag.WorkflowRunID(execution.GetRunId()))
 			return nil, nil, err
 		}
 
@@ -184,20 +184,18 @@ func GetHistory(
 		isLastPage,
 		int(pageSize)); err != nil {
 		metrics.ServiceErrIncompleteHistoryCounter.With(metricsHandler).Record(1)
-		logger.Error("getHistory: incomplete history",
+		log.ErrorWithCode(logger, errorcode.HistoryAPIGetHistoryUtilityOperationFailed, "getHistory: incomplete history", err,
 			tag.WorkflowNamespaceID(namespaceID.String()),
 			tag.WorkflowID(execution.GetWorkflowId()),
-			tag.WorkflowRunID(execution.GetRunId()),
-			tag.Error(err))
+			tag.WorkflowRunID(execution.GetRunId()))
 	}
 	if len(nextPageToken) == 0 && transientWorkflowTaskInfo != nil {
 		if err := validateTransientWorkflowTaskEvents(nextEventID, transientWorkflowTaskInfo); err != nil {
 			metrics.ServiceErrIncompleteHistoryCounter.With(metricsHandler).Record(1)
-			logger.Error("getHistory error",
+			log.ErrorWithCode(logger, errorcode.HistoryAPIGetHistoryUtilityOperationFailed, "getHistory error", err,
 				tag.WorkflowNamespaceID(namespaceID.String()),
 				tag.WorkflowID(execution.GetWorkflowId()),
-				tag.WorkflowRunID(execution.GetRunId()),
-				tag.Error(err))
+				tag.WorkflowRunID(execution.GetRunId()))
 		}
 		// Append the transient workflow task events once we are done enumerating everything from the events table
 		historyEvents = append(historyEvents, transientWorkflowTaskInfo.HistorySuffix...)
@@ -254,7 +252,7 @@ func GetHistoryReverse(
 		// noop
 	case *serviceerror.DataLoss:
 		// log event
-		logger.Error("encountered data loss event", tag.WorkflowNamespaceID(namespaceID.String()), tag.WorkflowID(execution.GetWorkflowId()), tag.WorkflowRunID(execution.GetRunId()))
+		log.ErrorWithCode(logger, errorcode.HistoryAPIGetHistoryUtilityOperationFailed, "encountered data loss event", err, tag.WorkflowNamespaceID(namespaceID.String()), tag.WorkflowID(execution.GetWorkflowId()), tag.WorkflowRunID(execution.GetRunId()))
 		return nil, nil, 0, err
 	default:
 		return nil, nil, 0, err

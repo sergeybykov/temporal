@@ -26,6 +26,7 @@ import (
 	"go.temporal.io/server/common/definition"
 	"go.temporal.io/server/common/effect"
 	"go.temporal.io/server/common/enums"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -239,8 +240,7 @@ func (handler *workflowTaskCompletedHandler) rejectUnprocessedUpdates(
 		handler.effects)
 
 	if len(rejectedUpdateIDs) > 0 {
-		handler.logger.Warn(
-			"Workflow task completed w/o processing updates.",
+		log.WarnWithCode(handler.logger, errorcode.HistoryTaskProcessingFailed, "Workflow task completed w/o processing updates.",
 			tag.WorkflowNamespaceID(wfKey.NamespaceID),
 			tag.WorkflowID(wfKey.WorkflowID),
 			tag.WorkflowRunID(wfKey.RunID),
@@ -696,11 +696,9 @@ func (handler *workflowTaskCompletedHandler) handleCommandCompleteWorkflow(
 	// If the workflow task has more than one completion event then just pick the first one
 	if !handler.mutableState.IsWorkflowExecutionRunning() {
 		metrics.MultipleCompletionCommandsCounter.With(handler.metricsHandler).Record(1)
-		handler.logger.Warn(
-			"Multiple completion commands",
+		log.WarnWithCode(handler.logger, errorcode.HistoryTaskProcessingFailed, "Multiple completion commands",
 			tag.WorkflowCommandType(enumspb.COMMAND_TYPE_COMPLETE_WORKFLOW_EXECUTION),
-			tag.ErrorTypeMultipleCompletionCommands,
-		)
+			tag.ErrorTypeMultipleCompletionCommands)
 		return nil, nil
 	}
 
@@ -751,11 +749,9 @@ func (handler *workflowTaskCompletedHandler) handleCommandFailWorkflow(
 	// If the workflow task has more than one completion event then just pick the first one
 	if !handler.mutableState.IsWorkflowExecutionRunning() {
 		metrics.MultipleCompletionCommandsCounter.With(handler.metricsHandler).Record(1)
-		handler.logger.Warn(
-			"Multiple completion commands",
+		log.WarnWithCode(handler.logger, errorcode.HistoryTaskProcessingFailed, "Multiple completion commands",
 			tag.WorkflowCommandType(enumspb.COMMAND_TYPE_FAIL_WORKFLOW_EXECUTION),
-			tag.ErrorTypeMultipleCompletionCommands,
-		)
+			tag.ErrorTypeMultipleCompletionCommands)
 		return nil, nil
 	}
 
@@ -839,11 +835,9 @@ func (handler *workflowTaskCompletedHandler) handleCommandCancelWorkflow(
 	// If the workflow task has more than one completion event than just pick the first one
 	if !handler.mutableState.IsWorkflowExecutionRunning() {
 		metrics.MultipleCompletionCommandsCounter.With(handler.metricsHandler).Record(1)
-		handler.logger.Warn(
-			"Multiple completion commands",
+		log.WarnWithCode(handler.logger, errorcode.HistoryTaskProcessingFailed, "Multiple completion commands",
 			tag.WorkflowCommandType(enumspb.COMMAND_TYPE_CANCEL_WORKFLOW_EXECUTION),
-			tag.ErrorTypeMultipleCompletionCommands,
-		)
+			tag.ErrorTypeMultipleCompletionCommands)
 		return nil, nil
 	}
 
@@ -986,11 +980,9 @@ func (handler *workflowTaskCompletedHandler) handleCommandContinueAsNewWorkflow(
 	// If the workflow task has more than one completion event than just pick the first one
 	if !handler.mutableState.IsWorkflowExecutionRunning() {
 		metrics.MultipleCompletionCommandsCounter.With(handler.metricsHandler).Record(1)
-		handler.logger.Warn(
-			"Multiple completion commands",
+		log.WarnWithCode(handler.logger, errorcode.HistoryTaskProcessingFailed, "Multiple completion commands",
 			tag.WorkflowCommandType(enumspb.COMMAND_TYPE_CONTINUE_AS_NEW_WORKFLOW_EXECUTION),
-			tag.ErrorTypeMultipleCompletionCommands,
-		)
+			tag.ErrorTypeMultipleCompletionCommands)
 		return nil, nil
 	}
 

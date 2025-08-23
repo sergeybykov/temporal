@@ -17,7 +17,9 @@ import (
 	persistencespb "go.temporal.io/server/api/persistence/v1"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/locks"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/persistence/visibility/manager"
@@ -219,12 +221,10 @@ func Invoke(
 	)
 	relocatableAttributes, err := relocatableAttrsFetcher.Fetch(ctx, mutableState)
 	if err != nil {
-		shard.GetLogger().Error(
-			"Failed to fetch relocatable attributes",
+		log.ErrorWithCode(shard.GetLogger(), errorcode.HistoryHistoryDescribeworkflowError, "Failed to fetch relocatable attributes", err,
 			tag.WorkflowNamespaceID(namespaceID.String()),
 			tag.WorkflowID(executionInfo.WorkflowId),
 			tag.WorkflowRunID(executionState.RunId),
-			tag.Error(err),
 		)
 		return nil, serviceerror.NewInternal("Failed to fetch memo and search attributes")
 	}
@@ -241,24 +241,20 @@ func Invoke(
 	for _, node := range cbs {
 		callback, err := cbColl.Data(node.Key.ID)
 		if err != nil {
-			shard.GetLogger().Error(
-				"failed to load callback data while building describe response",
+			log.ErrorWithCode(shard.GetLogger(), errorcode.HistoryHistoryDescribeworkflowError2, "failed to load callback data while building describe response", err,
 				tag.WorkflowNamespaceID(namespaceID.String()),
 				tag.WorkflowID(executionInfo.WorkflowId),
 				tag.WorkflowRunID(executionState.RunId),
-				tag.Error(err),
 			)
 			return nil, serviceerror.NewInternal("failed to construct describe response")
 		}
 
 		callbackInfo, err := buildCallbackInfo(namespaceID, callback, outboundQueueCBPool)
 		if err != nil {
-			shard.GetLogger().Error(
-				"failed to build callback info while building describe response",
+			log.ErrorWithCode(shard.GetLogger(), errorcode.HistoryHistoryDescribeworkflowError3, "failed to build callback info while building describe response", err,
 				tag.WorkflowNamespaceID(namespaceID.String()),
 				tag.WorkflowID(executionInfo.WorkflowId),
 				tag.WorkflowRunID(executionState.RunId),
-				tag.Error(err),
 			)
 			return nil, serviceerror.NewInternal("failed to construct describe response")
 		}

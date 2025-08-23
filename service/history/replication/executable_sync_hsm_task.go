@@ -10,7 +10,9 @@ import (
 	persistencespb "go.temporal.io/server/api/persistence/v1"
 	replicationspb "go.temporal.io/server/api/replication/v1"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/namespace"
@@ -85,7 +87,7 @@ func (e *ExecutableSyncHSMTask) Execute() error {
 	if nsError != nil {
 		return nsError
 	} else if !apply {
-		e.Logger.Warn("Skipping the replication task",
+		log.WarnWithCode(e.Logger, errorcode.HistoryHistoryReplicationFailed, "Skipping the replication task",
 			tag.WorkflowNamespaceID(e.NamespaceID),
 			tag.WorkflowID(e.WorkflowID),
 			tag.WorkflowRunID(e.RunID),
@@ -150,7 +152,7 @@ func (e *ExecutableSyncHSMTask) HandleErr(err error) error {
 		}
 		return e.Execute()
 	default:
-		e.Logger.Error("Sync HSM replication task encountered error",
+		log.ErrorWithCode(e.Logger, errorcode.HistoryHistoryReplicationError, "Sync HSM replication task encountered error", err,
 			tag.WorkflowNamespaceID(e.NamespaceID),
 			tag.WorkflowID(e.WorkflowID),
 			tag.WorkflowRunID(e.RunID),

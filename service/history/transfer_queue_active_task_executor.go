@@ -23,6 +23,7 @@ import (
 	chasmworkflow "go.temporal.io/server/chasm/lib/workflow"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/locks"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -574,7 +575,9 @@ func (t *transferQueueActiveTaskExecutor) processCancelExecution(
 		case *serviceerror.NamespaceNotFound:
 			failedCause = enumspb.CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_NAMESPACE_NOT_FOUND
 		default:
-			t.logger.Error("Unexpected error type returned from RequestCancelWorkflowExecution API call.", tag.ServiceErrorType(err), tag.Error(err))
+			log.ErrorWithCode(t.logger, errorcode.HistoryTransferRequestCancelFailed,
+				"Unexpected error type returned from RequestCancelWorkflowExecution API call", err,
+				tag.ServiceErrorType(err))
 			return err
 		}
 		return t.requestCancelExternalExecutionFailed(
@@ -714,7 +717,9 @@ func (t *transferQueueActiveTaskExecutor) processSignalExecution(
 		case *serviceerror.InvalidArgument:
 			failedCause = enumspb.SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_SIGNAL_COUNT_LIMIT_EXCEEDED
 		default:
-			t.logger.Error("Unexpected error type returned from SignalWorkflowExecution API call.", tag.ServiceErrorType(err), tag.Error(err))
+			log.ErrorWithCode(t.logger, errorcode.HistoryTransferSignalFailed,
+				"Unexpected error type returned from SignalWorkflowExecution API call", err,
+				tag.ServiceErrorType(err))
 			return err
 		}
 		return t.signalExternalExecutionFailed(
@@ -1024,7 +1029,9 @@ func (t *transferQueueActiveTaskExecutor) processStartChildExecution(
 		case *serviceerror.NamespaceNotFound:
 			failedCause = enumspb.START_CHILD_WORKFLOW_EXECUTION_FAILED_CAUSE_NAMESPACE_NOT_FOUND
 		default:
-			t.logger.Error("Unexpected error type returned from StartWorkflowExecution API call for child workflow.", tag.ServiceErrorType(err), tag.Error(err))
+			log.ErrorWithCode(t.logger, errorcode.HistoryTransferChildWorkflowFailed,
+				"Unexpected error type returned from StartWorkflowExecution API call for child workflow", err,
+				tag.ServiceErrorType(err))
 			return err
 		}
 
@@ -1180,13 +1187,13 @@ func (t *transferQueueActiveTaskExecutor) processResetWorkflow(
 			return err
 		}
 		if resp.RunID != task.RunID {
-			logger.Warn("Auto-Reset is skipped, because current run is stale.")
+			log.WarnWithCode(logger, errorcode.HistoryTransferAutoResetFailed, "Auto-Reset is skipped, because current run is stale.")
 			return nil
 		}
 	}
 	// TODO: current reset doesn't allow childWFs, in the future we will release this restriction
 	if len(currentMutableState.GetPendingChildExecutionInfos()) > 0 {
-		logger.Warn("Auto-Reset is skipped, because current run has pending child executions.")
+		log.WarnWithCode(logger, errorcode.HistoryTransferAutoResetFailed, "Auto-Reset is skipped, because current run has pending child executions.")
 		return nil
 	}
 
@@ -1212,7 +1219,7 @@ func (t *transferQueueActiveTaskExecutor) processResetWorkflow(
 
 	reason, resetPoint := workflow.FindAutoResetPoint(t.shardContext.GetTimeSource(), namespaceEntry.VerifyBinaryChecksum, executionInfo.AutoResetPoints)
 	if resetPoint == nil {
-		logger.Warn("Auto-Reset is skipped, because reset point is not found.")
+		log.WarnWithCode(logger, errorcode.HistoryTransferAutoResetFailed, "Auto-Reset is skipped, because reset point is not found.")
 		return nil
 	}
 	logger = log.With(
@@ -1723,12 +1730,14 @@ func (t *transferQueueActiveTaskExecutor) resetWorkflow(
 			1,
 			metrics.OperationTag(metrics.OperationTransferQueueProcessorScope),
 		)
-		logger.Error("Auto-Reset workflow failed and not retryable. The reset point is corrupted.", tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.HistoryTransferAutoResetFailed,
+			"Auto-Reset workflow failed and not retryable. The reset point is corrupted", err)
 		return nil
 
 	default:
 		// log this error and retry
-		logger.Error("Auto-Reset workflow failed", tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.HistoryTransferAutoResetFailed,
+			"Auto-Reset workflow failed", err)
 		return err
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/locks"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -167,10 +168,9 @@ func (c *ContextImpl) LoadMutableState(ctx context.Context, shardContext history
 	}
 
 	if actualArchetype := c.MutableState.ChasmTree().Archetype(); actualArchetype != "" && c.archetype != chasm.ArchetypeAny && c.archetype != actualArchetype {
-		c.logger.Warn("Potential ID conflict across different archetypes",
+		log.WarnWithCode(c.logger, errorcode.HistoryDataInconsistency, "Potential ID conflict across different archetypes",
 			tag.Archetype(c.archetype.String()),
-			tag.NewStringTag("actual-archetype", actualArchetype.String()),
-		)
+			tag.NewStringTag("actual-archetype", actualArchetype.String()))
 		return nil, serviceerror.NewNotFoundf(
 			"CHASM Archetype missmatch for %v, expected: %s, actual: %s",
 			c.workflowKey,
@@ -624,7 +624,7 @@ func (c *ContextImpl) SubmitClosedWorkflowSnapshot(
 	}
 	if len(resetWorkflowEventsSeq) != 0 {
 		metrics.ClosedWorkflowBufferEventCount.With(c.metricsHandler).Record(1)
-		c.logger.Warn("SetWorkflowExecution encountered new events")
+		log.WarnWithCode(c.logger, errorcode.HistoryDataInconsistency, "SetWorkflowExecution encountered new events")
 	}
 
 	return NewTransaction(shardContext).SetWorkflowExecution(
@@ -663,12 +663,14 @@ func (c *ContextImpl) mergeUpdateWithNewReplicationTasks(
 	}
 	if numCurrentReplicationTasks == 0 {
 		c.logger.Info("Current workflow has no replication task, while new workflow has replication task",
+			tag.ErrorCode(errorcode.HistoryWorkflowExists),
 			tag.WorkflowNewRunID(newWorkflowSnapshot.ExecutionState.RunId),
 		)
 		return nil
 	}
 	if numNewReplicationTasks == 0 {
 		c.logger.Info("New workflow has no replication task, while current workflow has replication task",
+			tag.ErrorCode(errorcode.HistoryInvalidState),
 			tag.WorkflowNewRunID(newWorkflowSnapshot.ExecutionState.RunId),
 		)
 		return nil
@@ -677,6 +679,7 @@ func (c *ContextImpl) mergeUpdateWithNewReplicationTasks(
 		// This could happen when importing a workflow and current running workflow is being terminated.
 		// TODO: support more than one replication tasks (batch of events) in the new workflow
 		c.logger.Info("Skipped merging replication tasks because new run has more than one replication tasks",
+			tag.ErrorCode(errorcode.HistoryConditionFailed),
 			tag.WorkflowNewRunID(newWorkflowSnapshot.ExecutionState.RunId),
 		)
 		return nil
@@ -726,7 +729,8 @@ func (c *ContextImpl) mergeUpdateWithNewReplicationTasks(
 				}
 			}
 			if !taskEquivalentsUpdated {
-				c.logger.Error("SyncVersionedTransitionTask has no HistoryReplicationTask equivalent to update")
+				log.ErrorWithCode(c.logger, errorcode.HistorySyncVersionedTransitionMissing,
+					"SyncVersionedTransitionTask has no HistoryReplicationTask equivalent to update", nil)
 			}
 			return taskEquivalentsUpdated
 		default:
@@ -992,7 +996,7 @@ func (c *ContextImpl) maxHistorySizeExceeded(shardContext historyi.ShardContext)
 	historySize := int(c.MutableState.GetExecutionInfo().ExecutionStats.HistorySize)
 
 	if historySize > historySizeLimitError && c.MutableState.IsWorkflowExecutionRunning() {
-		c.logger.Warn("history size exceeds error limit.",
+		log.WarnWithCode(c.logger, errorcode.HistoryWorkflowSizeConstraintViolation, "history size exceeds error limit.",
 			tag.WorkflowHistorySize(historySize))
 
 		return true
@@ -1030,7 +1034,7 @@ func (c *ContextImpl) maxHistoryCountExceeded(shardContext historyi.ShardContext
 	historyCount := int(c.MutableState.GetNextEventID() - 1)
 
 	if historyCount > historyCountLimitError && c.MutableState.IsWorkflowExecutionRunning() {
-		c.logger.Warn("history count exceeds error limit.",
+		log.WarnWithCode(c.logger, errorcode.HistoryWorkflowSizeConstraintViolation, "history count exceeds error limit.",
 			tag.WorkflowEventCount(historyCount))
 
 		return true
@@ -1067,7 +1071,7 @@ func (c *ContextImpl) maxMutableStateSizeExceeded() bool {
 	metrics.PersistedMutableStateSize.With(c.metricsHandler).Record(int64(mutableStateSize))
 
 	if mutableStateSize > mutableStateSizeLimitError {
-		c.logger.Warn("mutable state size exceeds error limit.",
+		log.WarnWithCode(c.logger, errorcode.HistoryWorkflowSizeConstraintViolation, "mutable state size exceeds error limit.",
 			tag.WorkflowMutableStateSize(mutableStateSize))
 
 		return true

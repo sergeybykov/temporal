@@ -11,6 +11,7 @@ import (
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/collection"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -112,7 +113,7 @@ func (r *reschedulerImpl) Stop() {
 	r.timerGate.Close()
 
 	if success := common.AwaitWaitGroup(&r.shutdownWG, time.Minute); !success {
-		r.logger.Warn("Task rescheduler timedout on shutdown.", tag.LifeCycleStopTimedout)
+		log.WarnWithCode(r.logger, errorcode.InfraServiceShutdownFailed, "Task rescheduler timedout on shutdown.", tag.LifeCycleStopTimedout)
 	}
 
 	r.logger.Info("Task rescheduler stopped.", tag.LifeCycleStopped)

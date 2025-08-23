@@ -11,6 +11,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/server/chasm"
 	"go.temporal.io/server/common/cluster"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/locks"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -333,7 +334,7 @@ func (r *transactionMgrImpl) backfillWorkflowEventsReapply(
 		switch err.(type) {
 		case *serviceerror.InvalidArgument:
 			// no-op. Usually this is due to reset workflow with pending child workflows
-			r.logger.Warn("Cannot reset workflow. Ignoring reapply events.", tag.Error(err))
+			log.WarnWithCode(r.logger, errorcode.HistoryWorkflowNotFound, "Cannot reset workflow. Ignoring reapply events.", tag.Error(err))
 			// the target workflow is not reset so it is still the current workflow. It need to persist updated version histories.
 			return persistence.UpdateWorkflowModeUpdateCurrent, historyi.TransactionPolicyPassive, nil
 		case nil:

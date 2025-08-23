@@ -9,6 +9,7 @@ import (
 
 	enumsspb "go.temporal.io/server/api/enums/v1"
 	replicationspb "go.temporal.io/server/api/replication/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/quotas"
@@ -93,7 +94,7 @@ func (s *SenderFlowControllerImpl) Wait(ctx context.Context, priority enumsspb.T
 		defer cancel()
 		err := rateLimiter.Wait(childCtx)
 		if err != nil {
-			s.logger.Error("error waiting for rate limiter", tag.Error(err))
+			log.ErrorWithCode(s.logger, errorcode.RateLimiterWaitFailed, "error waiting for rate limiter", err)
 			return err
 		}
 		return nil

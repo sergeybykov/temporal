@@ -15,6 +15,7 @@ import (
 	"go.temporal.io/server/chasm"
 	"go.temporal.io/server/client"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/namespace"
@@ -216,7 +217,7 @@ func (t *timerQueueStandbyTaskExecutor) executeUserTimerTimeoutTask(
 			_, ok := mutableState.GetUserTimerInfoByEventID(timerSequenceID.EventID)
 			if !ok {
 				errString := fmt.Sprintf("failed to find in user timer event ID: %v", timerSequenceID.EventID)
-				t.logger.Error(errString)
+				log.ErrorWithCode(t.logger, errorcode.HistoryTaskProcessingFailed, errString, nil)
 				return nil, serviceerror.NewInternal(errString)
 			}
 
@@ -277,7 +278,7 @@ func (t *timerQueueStandbyTaskExecutor) executeActivityTimeoutTask(
 			_, ok := mutableState.GetActivityInfo(timerSequenceID.EventID)
 			if !ok {
 				errString := fmt.Sprintf("failed to find in memory activity timer: %v", timerSequenceID.EventID)
-				t.logger.Error(errString)
+				log.ErrorWithCode(t.logger, errorcode.HistoryTaskProcessingFailed, errString, nil)
 				return nil, serviceerror.NewInternal(errString)
 			}
 

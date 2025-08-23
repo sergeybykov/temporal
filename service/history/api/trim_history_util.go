@@ -6,6 +6,8 @@ import (
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/server/api/historyservice/v1"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/persistence"
 	"go.temporal.io/server/service/history/events"
@@ -46,11 +48,10 @@ func TrimHistoryNode(
 	})
 	if err != nil {
 		// best effort
-		shardContext.GetLogger().Error("unable to trim history branch",
+		log.ErrorWithCode(shardContext.GetLogger(), errorcode.HistoryHistoryTrimhistoryutilError, "unable to trim history branch", err,
 			tag.WorkflowNamespaceID(namespaceID),
 			tag.WorkflowID(workflowID),
 			tag.WorkflowRunID(runID),
-			tag.Error(err),
 		)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -79,7 +80,7 @@ func (m *mitigatorImpl) Mitigate(alert Alert) {
 			m.monitor,
 		)
 	default:
-		m.logger.Error("Unknown queue alert type", tag.QueueAlert(alert))
+		log.ErrorWithCode(m.logger, errorcode.HistoryQueueUnknownAlertType, "Unknown queue alert type", nil, tag.QueueAlert(alert))
 		return
 	}
 

@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
@@ -238,7 +239,7 @@ func (r *StateRebuilderImpl) buildMutableStateFromEvent(
 		case nil:
 			// noop
 		case *serviceerror.DataLoss:
-			r.logger.Error("encountered data loss event", tag.WorkflowNamespaceID(baseWorkflowIdentifier.NamespaceID), tag.WorkflowID(baseWorkflowIdentifier.WorkflowID), tag.WorkflowRunID(baseWorkflowIdentifier.RunID))
+			log.ErrorWithCode(r.logger, errorcode.HistoryDataInconsistency, "encountered data loss event", err, tag.WorkflowNamespaceID(baseWorkflowIdentifier.NamespaceID), tag.WorkflowID(baseWorkflowIdentifier.WorkflowID), tag.WorkflowRunID(baseWorkflowIdentifier.RunID))
 			return nil, 0, err
 		default:
 			return nil, 0, err
@@ -327,7 +328,7 @@ func (r *StateRebuilderImpl) applyEvents(
 		"",
 	)
 	if err != nil {
-		r.logger.Error("StateRebuilder unable to Rebuild mutable state.", tag.Error(err))
+		log.ErrorWithCode(r.logger, errorcode.HistoryReplicationTaskExecutorOperationFailed, "StateRebuilder unable to Rebuild mutable state.", err)
 		return err
 	}
 	return nil

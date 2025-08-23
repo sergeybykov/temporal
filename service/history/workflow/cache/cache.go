@@ -14,6 +14,7 @@ import (
 	chasmworkflow "go.temporal.io/server/chasm/lib/workflow"
 	"go.temporal.io/server/common/cache"
 	"go.temporal.io/server/common/definition"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/finalizer"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/locks"
@@ -370,7 +371,7 @@ func (c *cacheImpl) makeReleaseFunc(
 					if isDirty {
 						wfContext.Clear()
 						logger := log.With(shardContext.GetLogger(), tag.ComponentHistoryCache)
-						logger.Error("Cache encountered dirty mutable state transaction",
+						log.ErrorWithCode(logger, errorcode.HistoryMutableStateDirtyTransaction, "Cache encountered dirty mutable state transaction", nil,
 							tag.WorkflowNamespaceID(wfContext.GetWorkflowKey().NamespaceID),
 							tag.WorkflowID(wfContext.GetWorkflowKey().WorkflowID),
 							tag.WorkflowRunID(wfContext.GetWorkflowKey().RunID),

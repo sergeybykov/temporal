@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"go.temporal.io/server/common/clock"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/persistence"
@@ -153,6 +154,7 @@ func (a *taskKeyGenerator) setRangeID(rangeID int64) {
 	a.exclusiveMaxTaskID = (rangeID + 1) << a.rangeSizeBits
 
 	a.logger.Info("Task key range updated",
+		tag.ErrorCode(errorcode.HistoryTaskProcessingFailed),
 		tag.Number(a.nextTaskID),
 		tag.NextNumber(a.exclusiveMaxTaskID),
 	)

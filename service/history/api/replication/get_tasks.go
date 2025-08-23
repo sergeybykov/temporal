@@ -10,6 +10,8 @@ import (
 	enumsspb "go.temporal.io/server/api/enums/v1"
 	persistencespb "go.temporal.io/server/api/persistence/v1"
 	replicationspb "go.temporal.io/server/api/replication/v1"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/persistence"
 	historyi "go.temporal.io/server/service/history/interfaces"
@@ -59,7 +61,7 @@ func GetTasks(
 				}},
 			},
 		); err != nil {
-			shardContext.GetLogger().Error("error updating replication level for shard", tag.Error(err), tag.OperationFailed)
+			log.ErrorWithCode(shardContext.GetLogger(), errorcode.HistoryHistoryReplicationError, "error updating replication level for shard", err, tag.OperationFailed)
 		}
 		shardContext.UpdateRemoteClusterInfo(pollingCluster, ackMessageID, ackTimestamp)
 	}
@@ -70,7 +72,7 @@ func GetTasks(
 		queryMessageID,
 	)
 	if err != nil {
-		shardContext.GetLogger().Error("Failed to retrieve replication messages.", tag.Error(err))
+		log.ErrorWithCode(shardContext.GetLogger(), errorcode.HistoryHistoryReplicationFailed2, "Failed to retrieve replication messages.", err)
 		return nil, err
 	}
 

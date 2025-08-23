@@ -7,8 +7,8 @@ import (
 	"sync"
 
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
-	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 )
 
@@ -129,7 +129,7 @@ func (s *BiDirectionStreamImpl[Req, Resp]) closeLocked() {
 	if s.streamingClient != nil {
 		err := s.streamingClient.CloseSend() // if there is error, the stream is also closed
 		if err != nil {
-			s.logger.Error("BiDirectionStream close error", tag.Error(err))
+			log.ErrorWithCode(s.logger, errorcode.HistoryHistoryReplicationError, "BiDirectionStream close error", err)
 		}
 	}
 }
@@ -183,7 +183,7 @@ func (s *BiDirectionStreamImpl[Req, Resp]) notifyRecvChannel(response Resp, err 
 	case s.channel <- resp:
 		return
 	default:
-		s.logger.Warn("no enough worker on bi-direction receiving stream")
+		log.WarnWithCode(s.logger, errorcode.StreamCloseError, "no enough worker on bi-direction receiving stream")
 		s.channel <- resp
 	}
 }

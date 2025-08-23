@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"go.temporal.io/server/common/convert"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/goro"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -72,7 +73,7 @@ func (o *ownership) start(controller *ControllerImpl) {
 		shardControllerMembershipUpdateListenerName,
 		o.membershipUpdateCh,
 	); err != nil {
-		o.logger.Fatal("Error adding listener", tag.Error(err))
+		log.FatalWithCode(o.logger, errorcode.HistoryTaskProcessingFailed, "Error adding listener", err)
 	}
 }
 
@@ -122,7 +123,7 @@ func (o *ownership) stop() {
 	if err := o.historyServiceResolver.RemoveListener(
 		shardControllerMembershipUpdateListenerName,
 	); err != nil {
-		o.logger.Error("Error removing membership update listener", tag.Error(err), tag.OperationFailed)
+		log.ErrorWithCode(o.logger, errorcode.MembershipListenerRemovalFailed, "Error removing membership update listener", err, tag.OperationFailed)
 	}
 
 	o.goros.Cancel()
