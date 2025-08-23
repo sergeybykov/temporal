@@ -12,6 +12,7 @@ import (
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -97,7 +98,7 @@ func (t *task) Run() executor.TaskStatus {
 		if err != nil {
 			metrics.ScavengerValidationSkipsCount.With(t.metricsHandler).Record(1)
 			// break out of the loop when pagination fails
-			t.logger.Error("unable to paginate concrete execution", tag.ShardID(t.shardID), tag.Error(err))
+			log.ErrorWithCode(t.logger, errorcode.WorkerScannerExecutionTaskProcessingFailed, "unable to paginate concrete execution", err, tag.ShardID(t.shardID))
 			retryTask = true
 			break
 		}
@@ -115,9 +116,8 @@ func (t *task) Run() executor.TaskStatus {
 			// continue validation process and retry after all workflow records has been iterated.
 			executionInfo := mutableState.GetExecutionInfo()
 			metrics.ScavengerValidationSkipsCount.With(t.metricsHandler).Record(1)
-			t.logger.Error("unable to process failure result",
+			log.ErrorWithCode(t.logger, errorcode.WorkerScannerExecutionTaskProcessingFailed, "unable to process failure result", err,
 				tag.ShardID(t.shardID),
-				tag.Error(err),
 				tag.WorkflowNamespaceID(executionInfo.GetNamespaceId()),
 				tag.WorkflowID(executionInfo.GetWorkflowId()),
 				tag.WorkflowRunID(mutableState.GetExecutionState().GetRunId()))
@@ -149,13 +149,11 @@ func (t *task) validate(
 		t.ctx,
 		mutableState,
 	); err != nil {
-		t.logger.Error("unable to validate mutable state ID",
+		log.ErrorWithCode(t.logger, errorcode.WorkerScannerExecutionTaskProcessingFailed, "unable to validate mutable state ID", err,
 			tag.ShardID(t.shardID),
 			tag.WorkflowNamespaceID(mutableState.GetExecutionInfo().GetNamespaceId()),
 			tag.WorkflowID(mutableState.GetExecutionInfo().GetWorkflowId()),
-			tag.WorkflowRunID(mutableState.GetExecutionState().GetRunId()),
-			tag.Error(err),
-		)
+			tag.WorkflowRunID(mutableState.GetExecutionState().GetRunId()))
 	} else {
 		results = append(results, validationResults...)
 	}
@@ -170,13 +168,11 @@ func (t *task) validate(
 			t.shardID,
 			t.executionManager,
 		).Validate(t.ctx, mutableState); err != nil {
-			t.logger.Error("unable to validate history event ID being contiguous",
+			log.ErrorWithCode(t.logger, errorcode.WorkerScannerExecutionTaskProcessingFailed, "unable to validate history event ID being contiguous", err,
 				tag.ShardID(t.shardID),
 				tag.WorkflowNamespaceID(mutableState.GetExecutionInfo().GetNamespaceId()),
 				tag.WorkflowID(mutableState.GetExecutionInfo().GetWorkflowId()),
-				tag.WorkflowRunID(mutableState.GetExecutionState().GetRunId()),
-				tag.Error(err),
-			)
+				tag.WorkflowRunID(mutableState.GetExecutionState().GetRunId()))
 		} else {
 			results = append(results, validationResults...)
 		}
@@ -215,7 +211,7 @@ func (t *task) handleFailures(
 			switch err.(type) {
 			case *serviceerror.NotFound,
 				*serviceerror.NamespaceNotFound:
-				t.logger.Error("Garbage data in DB after namespace is deleted", tag.WorkflowNamespaceID(executionInfo.GetNamespaceId()))
+				log.ErrorWithCode(t.logger, errorcode.WorkerScannerExecutionTaskProcessingFailed, "Garbage data in DB after namespace is deleted", nil, tag.WorkflowNamespaceID(executionInfo.GetNamespaceId()))
 				// We cannot do much in this case. It just ignores this error.
 				return nil
 			case nil:
@@ -264,6 +260,7 @@ func printValidationResult(
 		metrics.ScavengerValidationFailuresCount.With(metricsHandler).Record(1, metrics.FailureTag(result.failureType))
 		logger.Info(
 			"validation failed for execution.",
+			tag.ErrorCode(errorcode.WorkerMembershipListenerUnregisterFailed),
 			tag.WorkflowNamespaceID(mutableState.GetExecutionInfo().GetNamespaceId()),
 			tag.WorkflowID(mutableState.GetExecutionInfo().GetWorkflowId()),
 			tag.WorkflowRunID(mutableState.GetExecutionState().GetRunId()),

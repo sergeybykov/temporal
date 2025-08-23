@@ -15,6 +15,7 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 	deploymentspb "go.temporal.io/server/api/deployment/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/worker_versioning"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -101,7 +102,7 @@ func (d *WorkflowRunner) listenToSignals(ctx workflow.Context) {
 // with the version workflow. This helps prevent discrepancies if they ever fall out of sync.
 func (d *WorkflowRunner) syncVersionSummaryFromVersionWorkflow(summary *deploymentspb.WorkerDeploymentVersionSummary) {
 	if _, ok := d.State.Versions[summary.GetVersion()]; !ok {
-		d.logger.Error("received summary for a non-existing version, ignoring it", "version", summary.GetVersion())
+		d.logger.Error("received summary for a non-existing version, ignoring it", "version", summary.GetVersion(), "error-code", errorcode.WorkerSDKNonRetryableError)
 		return
 	}
 
@@ -110,7 +111,7 @@ func (d *WorkflowRunner) syncVersionSummaryFromVersionWorkflow(summary *deployme
 
 func (d *WorkflowRunner) updateVersionSummary(summary *deploymentspb.WorkerDeploymentVersionSummary) {
 	if _, ok := d.State.Versions[summary.GetVersion()]; !ok {
-		d.logger.Error("received summary for a non-existing version, ignoring it", "version", summary.GetVersion())
+		d.logger.Error("received summary for a non-existing version, ignoring it", "version", summary.GetVersion(), "error-code", errorcode.WorkerHostLookupFailed)
 		return
 	}
 
@@ -130,6 +131,7 @@ func (d *WorkflowRunner) updateVersionSummary(summary *deploymentspb.WorkerDeplo
 func (d *WorkflowRunner) run(ctx workflow.Context) error {
 	// TODO(carlydf): remove verbose logging
 	d.logger.Info("Raw workflow state at start",
+		"error-code", errorcode.WorkerMembershipListenerUnregisterFailed,
 		"state_nil", d.State == nil,
 		"create_time_nil", d.GetState().GetCreateTime() == nil,
 		"routing_config_nil", d.GetState().GetRoutingConfig() == nil,
@@ -166,6 +168,7 @@ func (d *WorkflowRunner) run(ctx workflow.Context) error {
 
 	// TODO(carlydf): remove verbose logging
 	d.logger.Info("Starting workflow run",
+		"error-code", errorcode.WorkerExistingTimerFoundError,
 		"create_time", d.State.GetCreateTime(),
 		"routing_config", d.State.GetRoutingConfig(),
 		//nolint:staticcheck // SA1019: worker versioning v0.31
@@ -337,7 +340,7 @@ func (d *WorkflowRunner) handleRegisterWorker(ctx workflow.Context, args *deploy
 	// use lock to enforce only one update at a time
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", "error", err)
 		return serviceerror.NewDeadlineExceeded("Could not acquire workflow lock")
 	}
 	defer func() {
@@ -431,7 +434,7 @@ func (d *WorkflowRunner) handleSetRampingVersion(ctx workflow.Context, args *dep
 	// use lock to enforce only one update at a time
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", "error", err)
 		return nil, serviceerror.NewDeadlineExceeded("Could not acquire workflow lock")
 	}
 	defer func() {
@@ -625,7 +628,7 @@ func (d *WorkflowRunner) handleDeleteVersion(ctx workflow.Context, args *deploym
 	// use lock to enforce only one update at a time
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", "error", err)
 		return serviceerror.NewDeadlineExceeded("Could not acquire workflow lock")
 	}
 	defer func() {
@@ -670,7 +673,7 @@ func (d *WorkflowRunner) handleSetCurrent(ctx workflow.Context, args *deployment
 	// use lock to enforce only one update at a time
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", "error", err)
 		return nil, serviceerror.NewDeadlineExceeded("Could not acquire workflow lock")
 	}
 	defer func() {

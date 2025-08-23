@@ -9,6 +9,7 @@ import (
 	"go.temporal.io/sdk/log"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/primitives"
@@ -184,7 +185,7 @@ func DeleteNamespaceWorkflow(ctx workflow.Context, params DeleteNamespaceWorkflo
 	})
 	var reclaimResourcesExecution workflow.Execution
 	if err = reclaimResourcesFuture.GetChildWorkflowExecution().Get(ctx, &reclaimResourcesExecution); err != nil {
-		logger.Error("Child workflow error.", tag.Error(err))
+		logger.Error("Child workflow error.", tag.Error(err), tag.ErrorCode(errorcode.WorkerDeleteNamespaceChildWorkflowError))
 		return result, err
 	}
 	logger.Info("Child workflow executed successfully.", tag.NewStringTag("wf-child-type", reclaimresources.WorkflowName))

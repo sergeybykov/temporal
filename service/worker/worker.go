@@ -6,6 +6,7 @@ import (
 
 	sdkworker "go.temporal.io/sdk/worker"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -93,7 +94,7 @@ func (wm *workerManager) Start() {
 
 	for _, w := range wm.workers {
 		if err := w.Start(); err != nil {
-			wm.logger.Fatal("Unable to start worker", tag.Error(err))
+			log.FatalWithCode(wm.logger, errorcode.WorkerStartupFailed, "Unable to start worker", err)
 		}
 	}
 

@@ -20,6 +20,8 @@ import (
 	"go.temporal.io/sdk/workflow"
 	schedulespb "go.temporal.io/server/api/schedule/v1"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/payload"
 	"go.temporal.io/server/common/primitives/timestamp"
@@ -248,7 +250,7 @@ func (s *scheduler) run() error {
 		// log these as json since it's more readable than the Go representation
 		specJson, _ := protojson.Marshal(s.Schedule.Spec)
 		policiesJson, _ := protojson.Marshal(s.Schedule.Policies)
-		s.logger.Info("Starting schedule", "spec", string(specJson), "policies", string(policiesJson))
+		s.logger.Info("Starting schedule", "spec", string(specJson), "policies", string(policiesJson), "error-code", errorcode.WorkerTaskProcessingFailed)
 
 		s.State.LastProcessedTime = timestamppb.New(s.now())
 		s.State.ConflictToken = InitialConflictToken
@@ -278,7 +280,7 @@ func (s *scheduler) run() error {
 		t2 := s.now()
 		if t2.Before(t1) {
 			// Time went backwards. Currently this can only happen across a continue-as-new boundary.
-			s.logger.Warn("Time went backwards", "from", t1, "to", t2)
+			s.logger.Warn("Time went backwards", "from", t1, "to", t2, "error-code", errorcode.ComponentsSchedulerOperationFailed)
 			t2 = t1
 		}
 		nextWakeup, lastAction := s.processTimeRange(
@@ -376,7 +378,7 @@ func (s *scheduler) compileSpec() {
 	cspec, err := s.specBuilder.NewCompiledSpec(s.Schedule.Spec)
 	if err != nil {
 		if s.logger != nil {
-			s.logger.Error("Invalid schedule", "error", err)
+			s.logger.Error("Invalid schedule", "error", err, "error-code", errorcode.WorkerSchedulerPolicyValidationFailed)
 		}
 		s.Info.InvalidScheduleError = err.Error()
 		s.cspec = nil
@@ -432,7 +434,7 @@ func (s *scheduler) processPatch(patch *schedulepb.SchedulePatch) {
 		if s.hasMinVersion(IncrementalBackfill) {
 			// Add to ongoing backfills to process incrementally
 			if len(s.State.OngoingBackfills) >= s.tweakables.MaxBufferSize {
-				s.logger.Warn("Buffer overrun for backfill requests")
+				s.logger.Warn("Buffer overrun for backfill requests", "error-code", errorcode.WorkerExistingTimerFoundError)
 				s.metrics.Counter(metrics.ScheduleBufferOverruns.Name()).Inc(1)
 				s.Info.BufferDropped += 1
 				continue
@@ -514,7 +516,7 @@ func (s *scheduler) getNextTimeV2(cacheBase, after time.Time) GetNextTimeResult 
 	}
 
 	// This should never happen unless there's a bug.
-	s.logger.Error("getNextTimeV2: time not found in cache", "after", after)
+	s.logger.Error("getNextTimeV2: time not found in cache", "after", after, tag.ErrorCode(errorcode.WorkerSchedulerTriggerEvaluationFailed))
 	return GetNextTimeResult{}
 }
 
@@ -801,7 +803,7 @@ func (s *scheduler) processWatcherResult(id string, f workflow.Future, long bool
 	var res schedulespb.WatchWorkflowResponse
 	err := f.Get(s.ctx, &res)
 	if err != nil {
-		s.logger.Error("error from workflow watcher future", "workflow", id, "error", err, "long", long)
+		s.logger.Error("error from workflow watcher future", "workflow", id, "error", err, "long", long, tag.ErrorCode(errorcode.WorkerSchedulerActionExecutionFailed))
 		return
 	}
 
@@ -1057,7 +1059,7 @@ func (s *scheduler) updateCustomSearchAttributes(searchAttributes *commonpb.Sear
 	for key, valuePayload := range searchAttributes.GetIndexedFields() {
 		var value any
 		if err := payload.Decode(valuePayload, &value); err != nil {
-			s.logger.Error("error updating search attributes of the scheule", "error", err)
+			s.logger.Error("error updating search attributes of the scheule", "error", err, tag.ErrorCode(errorcode.WorkerSchedulerStateTransitionFailed))
 			return
 		}
 		upsertMap[key] = value
@@ -1087,7 +1089,7 @@ func (s *scheduler) updateCustomSearchAttributes(searchAttributes *commonpb.Sear
 	}
 	//nolint:staticcheck // SA1019 The untyped function here is more convenient.
 	if err := workflow.UpsertSearchAttributes(s.ctx, upsertMap); err != nil {
-		s.logger.Error("error updating search attributes of the scheule", "error", err)
+		s.logger.Error("error updating search attributes of the scheule", "error", err, tag.ErrorCode(errorcode.WorkerSchedulerStateTransitionFailed))
 	}
 }
 
@@ -1113,7 +1115,7 @@ func (s *scheduler) updateMemoAndSearchAttributes() {
 			})
 		}
 		if err != nil {
-			s.logger.Error("error updating memo", "error", err)
+			s.logger.Error("error updating memo", "error", err, tag.ErrorCode(errorcode.WorkerSchedulerStateTransitionFailed))
 		}
 	}
 
@@ -1126,7 +1128,7 @@ func (s *scheduler) updateMemoAndSearchAttributes() {
 			searchattribute.TemporalSchedulePaused: s.Schedule.State.Paused,
 		})
 		if err != nil {
-			s.logger.Error("error updating search attributes", "error", err)
+			s.logger.Error("error updating search attributes", "error", err, tag.ErrorCode(errorcode.WorkerSchedulerStateTransitionFailed))
 		}
 	}
 }
@@ -1171,7 +1173,7 @@ func (s *scheduler) resolveOverlapPolicy(overlapPolicy enumspb.ScheduleOverlapPo
 func (s *scheduler) addStart(nominalTime, actualTime time.Time, overlapPolicy enumspb.ScheduleOverlapPolicy, manual bool) {
 	s.logger.Debug("addStart", "start-time", nominalTime, "actual-start-time", actualTime, "overlap-policy", overlapPolicy, "manual", manual)
 	if s.tweakables.MaxBufferSize > 0 && len(s.State.BufferedStarts) >= s.tweakables.MaxBufferSize {
-		s.logger.Warn("Buffer too large", "start-time", nominalTime, "overlap-policy", overlapPolicy, "manual", manual)
+		s.logger.Warn("Buffer too large", "start-time", nominalTime, "overlap-policy", overlapPolicy.String(), "manual", manual)
 		s.metrics.Counter(metrics.ScheduleBufferOverruns.Name()).Inc(1)
 		s.Info.BufferDropped += 1
 		return
@@ -1233,7 +1235,7 @@ func (s *scheduler) processBuffer() bool {
 			metrics.ScheduleActionTypeTag: metrics.ScheduleActionStartWorkflow,
 		})
 		if err != nil {
-			s.logger.Error("Failed to start workflow", "error", err)
+			s.logger.Error("Failed to start workflow", "error", err, tag.ErrorCode(errorcode.WorkerSchedulerActionExecutionFailed))
 			if !isUserScheduleError(err) {
 				metricsWithTag.Counter(metrics.ScheduleActionErrors.Name()).Inc(1)
 			}
@@ -1264,7 +1266,7 @@ func (s *scheduler) processBuffer() bool {
 		if len(s.Info.RunningWorkflows) > 0 {
 			s.startLongPollWatcher(s.Info.RunningWorkflows[0])
 		} else {
-			s.logger.Error("have buffered workflows but none running")
+			s.logger.Error("have buffered workflows but none running", tag.ErrorCode(errorcode.WorkerSchedulerStateInconsistent))
 		}
 	}
 
@@ -1428,7 +1430,7 @@ func (s *scheduler) refreshWorkflows(executions []*commonpb.WorkflowExecution) {
 
 func (s *scheduler) startLongPollWatcher(ex *commonpb.WorkflowExecution) {
 	if s.watchingFuture != nil {
-		s.logger.Error("startLongPollWatcher called with watcher already running")
+		s.logger.Error("startLongPollWatcher called with watcher already running", tag.ErrorCode(errorcode.WorkerSchedulerStateInconsistent))
 		return
 	}
 
@@ -1460,7 +1462,7 @@ func (s *scheduler) cancelWorkflow(ex *commonpb.WorkflowExecution) {
 	}
 	err := workflow.ExecuteLocalActivity(ctx, s.a.CancelWorkflow, areq).Get(s.ctx, nil)
 	if err != nil {
-		s.logger.Error("cancel workflow failed", "workflow", ex.WorkflowId, "error", err)
+		s.logger.Error("cancel workflow failed", "workflow", ex.WorkflowId, "error", err, tag.ErrorCode(errorcode.WorkerSchedulerActionExecutionFailed))
 		s.metrics.Counter(metrics.ScheduleCancelWorkflowErrors.Name()).Inc(1)
 	}
 	// Note: the local activity has completed (or failed) here but the workflow might take time
@@ -1478,7 +1480,7 @@ func (s *scheduler) terminateWorkflow(ex *commonpb.WorkflowExecution) {
 	}
 	err := workflow.ExecuteLocalActivity(ctx, s.a.TerminateWorkflow, areq).Get(s.ctx, nil)
 	if err != nil {
-		s.logger.Error("terminate workflow failed", "workflow", ex.WorkflowId, "error", err)
+		s.logger.Error("terminate workflow failed", "workflow", ex.WorkflowId, "error", err, tag.ErrorCode(errorcode.WorkerSchedulerActionExecutionFailed))
 		s.metrics.Counter(metrics.ScheduleTerminateWorkflowErrors.Name()).Inc(1)
 	}
 	// Note: the local activity has completed (or failed) here but we'll still wait until we

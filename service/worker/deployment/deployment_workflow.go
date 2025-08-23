@@ -14,6 +14,8 @@ import (
 	"go.temporal.io/sdk/workflow"
 	deploymentspb "go.temporal.io/server/api/deployment/v1"
 	"go.temporal.io/server/common"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log/tag"
 )
 
 type (
@@ -77,7 +79,7 @@ func (d *DeploymentWorkflowRunner) run(ctx workflow.Context) error {
 
 	// Set up Query Handlers here:
 	if err := workflow.SetQueryHandler(ctx, QueryDescribeDeployment, d.handleDescribeQuery); err != nil {
-		d.logger.Error("Failed while setting up query handler")
+		d.logger.Error("Failed while setting up query handler", tag.ErrorCode(errorcode.WorkerDeploymentQueryHandlerSetupFailed))
 		return err
 	}
 
@@ -158,7 +160,7 @@ func (d *DeploymentWorkflowRunner) handleRegisterWorker(ctx workflow.Context, ar
 	// use lock to enforce only one update at a time
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", tag.ErrorCode(errorcode.WorkerDeploymentWorkflowLockAcquisitionFailed))
 		return err
 	}
 	d.pendingUpdates++
@@ -170,7 +172,7 @@ func (d *DeploymentWorkflowRunner) handleRegisterWorker(ctx workflow.Context, ar
 	// wait until series workflow started
 	err = workflow.Await(ctx, func() bool { return d.State.StartedSeriesWorkflow })
 	if err != nil {
-		d.logger.Error("Update canceled before series workflow started")
+		d.logger.Error("Update canceled before series workflow started", tag.ErrorCode(errorcode.WorkerDeploymentUpdateCanceledBeforeStart))
 		return err
 	}
 
@@ -247,7 +249,7 @@ func (d *DeploymentWorkflowRunner) handleSyncState(ctx workflow.Context, args *d
 	// use lock to enforce only one update at a time
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", tag.ErrorCode(errorcode.WorkerDeploymentWorkflowLockAcquisitionFailed))
 		return nil, serviceerror.NewDeadlineExceeded("Could not acquire workflow lock")
 	}
 	d.pendingUpdates++
@@ -259,7 +261,7 @@ func (d *DeploymentWorkflowRunner) handleSyncState(ctx workflow.Context, args *d
 	// wait until series workflow started
 	err = workflow.Await(ctx, func() bool { return d.State.StartedSeriesWorkflow })
 	if err != nil {
-		d.logger.Error("Update canceled before series workflow started")
+		d.logger.Error("Update canceled before series workflow started", tag.ErrorCode(errorcode.WorkerDeploymentUpdateCanceledBeforeStart))
 		return nil, serviceerror.NewDeadlineExceeded("Update canceled before series workflow started")
 	}
 

@@ -17,6 +17,7 @@ import (
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -249,7 +250,7 @@ func (s *Scanner) startWorkflowWithRetry(ctx context.Context, options sdkclient.
 	})
 	// if the scanner shuts down before the workflow is started, then the error will be context canceled
 	if err != nil && !common.IsContextCanceledErr(err) {
-		s.context.logger.Fatal("unable to start scanner", tag.WorkflowType(workflowType), tag.Error(err))
+		log.FatalWithCode(s.context.logger, errorcode.WorkerScannerExecutionTaskProcessingFailed, "unable to start scanner", err, tag.WorkflowType(workflowType))
 	}
 }
 
@@ -267,7 +268,7 @@ func (s *Scanner) startWorkflow(
 		if _, ok := err.(*serviceerror.WorkflowExecutionAlreadyStarted); ok {
 			return nil
 		}
-		s.context.logger.Error("error starting workflow", tag.WorkflowType(workflowType), tag.Error(err))
+		log.ErrorWithCode(s.context.logger, errorcode.WorkflowStartError, "error starting workflow", err, tag.WorkflowType(workflowType))
 		return err
 	}
 	s.context.logger.Info("workflow successfully started", tag.WorkflowType(workflowType))

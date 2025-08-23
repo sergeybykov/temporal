@@ -10,6 +10,7 @@ import (
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/metrics"
 	p "go.temporal.io/server/common/persistence"
 	"go.temporal.io/server/service/worker/scanner/executor"
@@ -142,7 +143,7 @@ func (s *Scavenger) run() {
 	for {
 		resp, err := s.listTaskQueue(s.lifecycleCtx, taskQueueBatchSize, pageToken)
 		if err != nil {
-			s.logger.Error("listTaskQueue error", tag.Error(err))
+			s.logger.Error("listTaskQueue error", tag.Error(err), tag.ErrorCode(errorcode.TaskQueueListError))
 			return
 		}
 

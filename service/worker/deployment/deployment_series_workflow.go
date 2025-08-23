@@ -9,6 +9,8 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 	deploymentspb "go.temporal.io/server/api/deployment/v1"
+	"go.temporal.io/server/common/errorcode"
+	"go.temporal.io/server/common/log/tag"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -87,7 +89,7 @@ func (d *DeploymentSeriesWorkflowRunner) handleSetCurrent(ctx workflow.Context, 
 	// use lock to enforce only one update at a time
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", tag.ErrorCode(errorcode.WorkerDeploymentOperationFailed))
 		return nil, serviceerror.NewDeadlineExceeded("Could not acquire workflow lock")
 	}
 	d.pendingUpdates++

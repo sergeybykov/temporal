@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/server/common"
 	hlc "go.temporal.io/server/common/clock/hybrid_logical_clock"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
@@ -194,10 +195,10 @@ func (a *Activities) processNamespaceEntry(
 					return ctx.Err()
 				}
 				// Intentionally don't fail the activity on other single entry errors.
-				a.logger.Error("Failed to update task queue user data",
+				log.ErrorWithCode(a.logger, errorcode.ScavengerDeleteHandlerError, "Failed to update task queue user data", err,
+					tag.ErrorCode(errorcode.TaskQueueUserDataUpdateFailed),
 					tag.WorkflowNamespace(ns.Name().String()),
-					tag.WorkflowTaskQueueName(entry.TaskQueue),
-					tag.Error(err))
+					tag.WorkflowTaskQueueName(entry.TaskQueue))
 			}
 			heartbeat.TaskQueueIdx++
 			a.recordHeartbeat(ctx, *heartbeat)
@@ -294,6 +295,7 @@ func (a *Activities) findBuildIdsToRemove(
 			a.recordHeartbeat(ctx, heartbeat)
 			if !exists {
 				a.logger.Info("Found build ID to remove",
+					tag.ErrorCode(errorcode.WorkerSDKStartFailedOutOfRetries),
 					tag.WorkflowNamespace(ns.Name().String()),
 					tag.WorkflowTaskQueueName(entry.TaskQueue),
 					tag.BuildId(buildId.Id),

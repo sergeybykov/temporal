@@ -23,6 +23,7 @@ import (
 	"go.temporal.io/server/api/matchingservice/v1"
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
@@ -1342,8 +1343,7 @@ func (d *ClientImpl) record(operation string, retErr *error, args ...any) func()
 					tag.NewAnyTag("args", args),
 				)
 			} else {
-				d.logger.Error("deployment client error",
-					tag.Error(*retErr),
+				log.ErrorWithCode(d.logger, errorcode.DeploymentClientError, "deployment client error", *retErr,
 					tag.Operation(operation),
 					tag.NewDurationTag("elapsed", elapsed),
 					tag.NewAnyTag("args", args),
@@ -1626,7 +1626,7 @@ func (d *ClientImpl) isTaskQueueExpectedInNewVersion(
 	}
 	response, err = d.matchingClient.DescribeTaskQueue(ctx, req)
 	if err != nil {
-		d.logger.Error("error fetching AddRate for task-queue", tag.Error(err))
+		log.ErrorWithCode(d.logger, errorcode.TaskQueueAddRateFetchError, "error fetching AddRate for task-queue", err)
 		return false, err
 	}
 

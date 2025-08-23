@@ -18,6 +18,7 @@ import (
 	schedulespb "go.temporal.io/server/api/schedule/v1"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/namespace"
@@ -314,8 +315,7 @@ func (r responseBuilder) Build(event *historypb.HistoryEvent) (*schedulespb.Watc
 		} else {
 			result := attrs.Result
 			if r.isTooBig(result) {
-				r.logger.Error(
-					fmt.Sprintf("result dropped due to its size %d", proto.Size(result)),
+				log.ErrorWithCode(r.logger, errorcode.WorkerSchedulerResultSizeExceeded, fmt.Sprintf("result dropped due to its size %d", proto.Size(result)), nil,
 					tag.WorkflowID(r.request.Execution.WorkflowId))
 				result = nil
 			}
@@ -329,8 +329,7 @@ func (r responseBuilder) Build(event *historypb.HistoryEvent) (*schedulespb.Watc
 		} else {
 			failure := attrs.Failure
 			if r.isTooBig(failure) {
-				r.logger.Error(
-					fmt.Sprintf("failure dropped due to its size %d", proto.Size(failure)),
+				log.ErrorWithCode(r.logger, errorcode.WorkerSchedulerFailureSizeExceeded, fmt.Sprintf("failure dropped due to its size %d", proto.Size(failure)), nil,
 					tag.WorkflowID(r.request.Execution.WorkflowId))
 				failure = nil
 			}

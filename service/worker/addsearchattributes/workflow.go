@@ -12,6 +12,7 @@ import (
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -122,10 +123,10 @@ func (a *activities) AddESMappingFieldActivity(ctx context.Context, params Workf
 		metrics.AddSearchAttributesFailuresCount.With(a.metricsHandler).Record(1)
 
 		if a.isRetryableError(err) {
-			a.logger.Error("Unable to update Elasticsearch mapping (retryable error).", tag.ESIndex(params.IndexName), tag.Error(err))
+			log.ErrorWithCode(a.logger, errorcode.WorkerAddSearchAttributesESMappingRetryable, "Unable to update Elasticsearch mapping (retryable error).", err, tag.ESIndex(params.IndexName))
 			return fmt.Errorf("%w: %v", ErrUnableToUpdateESMapping, err)
 		}
-		a.logger.Error("Unable to update Elasticsearch mapping (non-retryable error).", tag.ESIndex(params.IndexName), tag.Error(err))
+		log.ErrorWithCode(a.logger, errorcode.WorkerAddSearchAttributesESMappingNonRetryable, "Unable to update Elasticsearch mapping (non-retryable error).", err, tag.ESIndex(params.IndexName))
 		return temporal.NewNonRetryableApplicationError(fmt.Sprintf("%v: %v", ErrUnableToUpdateESMapping, err), "", nil)
 	}
 	a.logger.Info("Elasticsearch mapping created.", tag.ESIndex(params.IndexName), tag.ESMapping(params.CustomAttributesToAdd))
@@ -155,7 +156,7 @@ func (a *activities) WaitForYellowStatusActivity(ctx context.Context, indexName 
 
 	status, err := a.esClient.WaitForYellowStatus(ctx, indexName)
 	if err != nil {
-		a.logger.Error("Unable to get Elasticsearch cluster status.", tag.ESIndex(indexName), tag.Error(err))
+		log.ErrorWithCode(a.logger, errorcode.WorkerAddSearchAttributesESStatusFailed, "Unable to get Elasticsearch cluster status.", err, tag.ESIndex(indexName))
 		metrics.AddSearchAttributesFailuresCount.With(a.metricsHandler).Record(1)
 		return err
 	}
