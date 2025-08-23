@@ -35,6 +35,7 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/contextutil"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -698,6 +699,7 @@ pollLoop:
 				task.finish(nil, false)
 			case *serviceerror.NotFound: // mutable state not found, workflow not running or workflow task not found
 				e.logger.Info("Workflow task not found",
+					tag.ErrorCode(errorcode.MatchingMatchingMatchingengineError),
 					tag.WorkflowTaskQueueName(taskQueueName),
 					tag.WorkflowNamespaceID(task.event.Data.GetNamespaceId()),
 					tag.WorkflowID(task.event.Data.GetWorkflowId()),
@@ -714,6 +716,7 @@ pollLoop:
 			case *serviceerrors.ObsoleteDispatchBuildId:
 				// history should've scheduled another task on the right build ID. dropping this one.
 				e.logger.Info("dropping workflow task due to invalid build ID",
+					tag.ErrorCode(errorcode.MatchingMatchingMatchingengineError2),
 					tag.WorkflowTaskQueueName(taskQueueName),
 					tag.WorkflowNamespaceID(task.event.Data.GetNamespaceId()),
 					tag.WorkflowID(task.event.Data.GetWorkflowId()),
@@ -727,6 +730,7 @@ pollLoop:
 				// History should've scheduled another task on the right task queue and deployment.
 				// Dropping this one.
 				e.logger.Info("dropping obsolete workflow task",
+					tag.ErrorCode(errorcode.MatchingMatchingMatchingengineError3),
 					tag.WorkflowTaskQueueName(taskQueueName),
 					tag.WorkflowNamespaceID(task.event.Data.GetNamespaceId()),
 					tag.WorkflowID(task.event.Data.GetWorkflowId()),
@@ -829,7 +833,7 @@ func (e *matchingEngineImpl) getHistoryForQueryTask(
 }
 
 func (e *matchingEngineImpl) nonRetryableErrorsDropTask(task *internalTask, taskQueueName string, err error) {
-	e.logger.Error("dropping task due to non-nonretryable errors",
+	log.ErrorWithCode(e.logger, errorcode.MatchingTaskDroppedNonRetryable, "dropping task due to non-nonretryable errors", err,
 		tag.WorkflowNamespace(task.namespace.String()),
 		tag.WorkflowNamespaceID(task.event.Data.GetNamespaceId()),
 		tag.WorkflowID(task.event.Data.GetWorkflowId()),
@@ -916,6 +920,7 @@ pollLoop:
 				task.finish(nil, false)
 			case *serviceerror.NotFound: // mutable state not found, workflow not running or activity info not found
 				e.logger.Info("Activity task not found",
+					tag.ErrorCode(errorcode.MatchingMatchingMatchingengineError5),
 					tag.WorkflowNamespaceID(task.event.Data.GetNamespaceId()),
 					tag.WorkflowID(task.event.Data.GetWorkflowId()),
 					tag.WorkflowRunID(task.event.Data.GetRunId()),
@@ -1059,9 +1064,8 @@ func (e *matchingEngineImpl) QueryWorkflow(
 		// task timed out. log (optionally) and return the timeout error
 		ns, err := e.namespaceRegistry.GetNamespaceByID(namespace.ID(partition.NamespaceId()))
 		if err != nil {
-			e.logger.Error("Failed to get the namespace by ID",
-				tag.WorkflowNamespaceID(partition.NamespaceId()),
-				tag.Error(err))
+			log.ErrorWithCode(e.logger, errorcode.MatchingNamespaceLookupFailed, "Failed to get the namespace by ID", err,
+				tag.WorkflowNamespaceID(partition.NamespaceId()))
 		} else {
 			sampleRate := e.config.QueryWorkflowTaskTimeoutLogRate(ns.Name().String(), partition.TaskQueue().Name(), enumspb.TASK_QUEUE_TYPE_WORKFLOW)
 			if rand.Float64() < sampleRate {
@@ -2360,7 +2364,7 @@ func (e *matchingEngineImpl) CreateNexusEndpoint(ctx context.Context, request *m
 		timeSource: e.timeSource,
 	})
 	if err != nil {
-		e.logger.Error("Failed to create Nexus endpoint", tag.Error(err), tag.Endpoint(request.GetSpec().GetName()))
+		log.ErrorWithCode(e.logger, errorcode.MatchingNexusEndpointCreationFailed, "Failed to create Nexus endpoint", err, tag.Endpoint(request.GetSpec().GetName()))
 	} else {
 		e.logger.Info("Created Nexus endpoint", tag.Endpoint(request.GetSpec().GetName()))
 	}
@@ -2377,7 +2381,7 @@ func (e *matchingEngineImpl) UpdateNexusEndpoint(ctx context.Context, request *m
 		timeSource: e.timeSource,
 	})
 	if err != nil {
-		e.logger.Error("Failed to update Nexus endpoint", tag.Error(err), tag.Endpoint(request.GetSpec().GetName()))
+		log.ErrorWithCode(e.logger, errorcode.MatchingNexusEndpointUpdateFailed, "Failed to update Nexus endpoint", err, tag.Endpoint(request.GetSpec().GetName()))
 	} else {
 		e.logger.Info("Updated Nexus endpoint", tag.Endpoint(request.GetSpec().GetName()))
 	}
@@ -2388,7 +2392,7 @@ func (e *matchingEngineImpl) DeleteNexusEndpoint(ctx context.Context, request *m
 	// Write API, let persistence verify table ownership.
 	res, err := e.nexusEndpointClient.DeleteNexusEndpoint(ctx, request)
 	if err != nil {
-		e.logger.Error("Failed to delete Nexus endpoint", tag.Error(err), tag.Endpoint(request.GetId()))
+		log.ErrorWithCode(e.logger, errorcode.MatchingNexusEndpointDeletionFailed, "Failed to delete Nexus endpoint", err, tag.Endpoint(request.GetId()))
 	} else {
 		e.logger.Info("Deleted Nexus endpoint", tag.Endpoint(request.GetId()))
 	}
@@ -2400,11 +2404,11 @@ func (e *matchingEngineImpl) ListNexusEndpoints(ctx context.Context, request *ma
 	// Read API, verify table ownership via membership.
 	isOwner, ownershipLostCh, err := e.checkNexusEndpointsOwnership()
 	if err != nil {
-		e.logger.Error("Failed to check Nexus endpoints ownership", tag.Error(err))
+		log.ErrorWithCode(e.logger, errorcode.MatchingNexusEndpointsOwnershipCheckFailed, "Failed to check Nexus endpoints ownership", err)
 		return nil, serviceerror.NewAbortedf("cannot verify ownership of Nexus endpoints table: %v", err)
 	}
 	if !isOwner {
-		e.logger.Error("Matching node doesn't think it's the Nexus endpoints table owner", tag.Error(err))
+		log.ErrorWithCode(e.logger, errorcode.MatchingNexusEndpointsOwnershipNotOwner, "Matching node doesn't think it's the Nexus endpoints table owner", nil)
 		return nil, serviceerror.NewAborted("matching node doesn't think it's the Nexus endpoints table owner")
 	}
 
@@ -2460,7 +2464,7 @@ func (e *matchingEngineImpl) notifyNexusEndpointsOwnershipChange() {
 	// watchMembership method and is the only way the channel may be replaced.
 	isOwner, _, err := e.checkNexusEndpointsOwnership()
 	if err != nil {
-		e.logger.Error("Failed to check Nexus endpoints ownership", tag.Error(err))
+		log.ErrorWithCode(e.logger, errorcode.MatchingNexusEndpointsOwnershipCheckFailed, "Failed to check Nexus endpoints ownership", err)
 		return
 	}
 	if !isOwner {

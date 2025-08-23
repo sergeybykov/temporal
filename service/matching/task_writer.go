@@ -11,6 +11,7 @@ import (
 	persistencespb "go.temporal.io/server/api/persistence/v1"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -139,9 +140,8 @@ func (w *taskWriter) appendTasks(reqs []*writeTaskRequest) error {
 	_, err := w.db.CreateTasks(w.backlogMgr.tqCtx, reqs)
 	if err != nil {
 		w.backlogMgr.signalIfFatal(err)
-		w.logger.Error("Persistent store operation failure",
+		log.ErrorWithCode(w.logger, errorcode.MatchingTaskStoreOperationFailed, "Persistent store operation failure", err,
 			tag.StoreOperationCreateTask,
-			tag.Error(err),
 			tag.WorkflowTaskQueueName(w.backlogMgr.queueKey().PersistenceName()),
 			tag.WorkflowTaskQueueType(w.backlogMgr.queueKey().TaskType()))
 		return err

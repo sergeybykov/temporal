@@ -6,6 +6,7 @@ import (
 
 	"github.com/emirpasic/gods/maps/treemap"
 	godsutils "github.com/emirpasic/gods/utils"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 )
@@ -36,13 +37,13 @@ func (m *ackManager) addTask(taskID int64) {
 	m.Lock()
 	defer m.Unlock()
 	if m.readLevel >= taskID {
-		m.logger.Fatal("Next task ID is less than current read level.",
+		log.FatalWithCode(m.logger, errorcode.MatchingTaskStoreOperationFailed, "Next task ID is less than current read level.", nil,
 			tag.TaskID(taskID),
 			tag.ReadLevel(m.readLevel))
 	}
 	m.readLevel = taskID
 	if _, found := m.outstandingTasks.Get(taskID); found {
-		m.logger.Fatal("Already present in outstanding tasks", tag.TaskID(taskID))
+		log.FatalWithCode(m.logger, errorcode.MatchingTaskStoreOperationFailed, "Already present in outstanding tasks", nil, tag.TaskID(taskID))
 	}
 	m.outstandingTasks.Put(taskID, false)
 	m.backlogCountHint.Add(1)

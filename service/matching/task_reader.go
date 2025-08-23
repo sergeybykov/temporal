@@ -11,6 +11,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/clock"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -112,7 +113,7 @@ dispatchLoop:
 				if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) &&
 					// StickyWorkerUnavailable is expected for versioned sticky queues
 					!errors.As(err, &stickyUnavailable) {
-					tr.throttledLogger().Error("taskReader: unexpected error dispatching task", tag.Error(err))
+					log.ErrorWithCode(tr.throttledLogger(), errorcode.MatchingMatchingTaskreaderError, "taskReader: unexpected error dispatching task", err)
 				}
 				util.InterruptibleSleep(ctx, taskReaderOfferThrottleWait)
 			}

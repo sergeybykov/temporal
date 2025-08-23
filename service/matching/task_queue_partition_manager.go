@@ -16,6 +16,7 @@ import (
 	persistencespb "go.temporal.io/server/api/persistence/v1"
 	taskqueuespb "go.temporal.io/server/api/taskqueue/v1"
 	"go.temporal.io/server/common/cache"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -768,8 +769,7 @@ func (pm *taskQueuePartitionManagerImpl) ForceLoadAllChildPartitions() {
 				},
 			})
 			if err != nil {
-				pm.logger.Error("Failed to force load non-root partition after root partition was loaded",
-					tag.Error(err))
+				log.ErrorWithCode(pm.logger, errorcode.MatchingPartitionForceLoadFailed, "Failed to force load non-root partition after root partition was loaded", err)
 				return
 			}
 
@@ -1175,12 +1175,12 @@ func (pm *taskQueuePartitionManagerImpl) getVersionSetForAdd(directive *taskqueu
 }
 
 func (pm *taskQueuePartitionManagerImpl) recordUnknownBuildPoll(buildId string) {
-	pm.logger.Warn("unknown build ID in poll", tag.BuildId(buildId))
+	log.WarnWithCode(pm.logger, errorcode.MatchingTaskStoreOperationFailed, "unknown build ID in poll", tag.BuildId(buildId))
 	pm.metricsHandler.Counter(metrics.UnknownBuildPollsCounter.Name()).Record(1)
 }
 
 func (pm *taskQueuePartitionManagerImpl) recordUnknownBuildTask(buildId string) {
-	pm.logger.Warn("unknown build ID in task", tag.BuildId(buildId))
+	log.WarnWithCode(pm.logger, errorcode.MatchingTaskStoreOperationFailed, "unknown build ID in task", tag.BuildId(buildId))
 	pm.metricsHandler.Counter(metrics.UnknownBuildTasksCounter.Name()).Record(1)
 }
 

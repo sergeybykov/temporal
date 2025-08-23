@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"go.temporal.io/server/api/matchingservice/v1"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/membership"
@@ -76,7 +77,7 @@ func (s *Service) Start() {
 	go func() {
 		s.logger.Info("Starting to serve on matching listener")
 		if err := s.server.Serve(s.grpcListener); err != nil {
-			s.logger.Fatal("Failed to serve on matching listener", tag.Error(err))
+			log.FatalWithCode(s.logger, errorcode.MatchingTaskStoreOperationFailed, "Failed to serve on matching listener", err)
 		}
 	}()
 
@@ -98,7 +99,7 @@ func (s *Service) Stop() {
 		err = s.membershipMonitor.EvictSelf()
 	}
 	if err != nil {
-		s.logger.Error("ShutdownHandler: Failed to evict self from membership ring", tag.Error(err))
+		log.ErrorWithCode(s.logger, errorcode.InfraServiceShutdownFailed, "ShutdownHandler: Failed to evict self from membership ring", err)
 	}
 	s.healthServer.SetServingStatus(serviceName, healthpb.HealthCheckResponse_NOT_SERVING)
 

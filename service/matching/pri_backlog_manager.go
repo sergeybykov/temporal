@@ -15,6 +15,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/future"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -366,9 +367,8 @@ func (c *priBacklogManagerImpl) respoolTaskAfterError(task *persistencespb.TaskI
 	// We still can't lose the old task, so we just unload the entire task queue.
 	// We haven't advanced the ack level past this task, so when the task queue reloads,
 	// it will see this task again.
-	c.logger.Error("Persistent store operation failure",
+	log.ErrorWithCode(c.logger, errorcode.MatchingTaskStoreOperationFailed, "Persistent store operation failure", err,
 		tag.StoreOperationStopTaskQueue,
-		tag.Error(err),
 		tag.WorkflowTaskQueueName(c.queueKey().PersistenceName()),
 		tag.WorkflowTaskQueueType(c.queueKey().TaskType()))
 	// Skip final update since persistence is having problems.
