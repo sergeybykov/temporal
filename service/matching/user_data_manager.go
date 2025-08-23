@@ -15,6 +15,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/clock/hybrid_logical_clock"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/future"
 	"go.temporal.io/server/common/goro"
 	"go.temporal.io/server/common/headers"
@@ -288,7 +289,7 @@ func (m *userDataManagerImpl) fetchUserData(ctx context.Context) error {
 		if err != nil {
 			// don't log on context canceled, produces too much log spam at shutdown
 			if !common.IsContextCanceledErr(err) {
-				m.logger.Error("error fetching user data from parent", tag.Error(err))
+				log.ErrorWithCode(m.logger, errorcode.MatchingUserDataFetchFailed, "error fetching user data from parent", err)
 			}
 			var unimplErr *serviceerror.Unimplemented
 			if errors.As(err, &unimplErr) {
@@ -405,7 +406,7 @@ func (m *userDataManagerImpl) refreshUserDataFromDB(ctx context.Context) error {
 	if response.UserData.GetVersion() < m.userData.GetVersion() {
 		// We have newer data in memory than the db. This should only happen if the database
 		// went back in time. We should unload and start over.
-		m.logger.Error("user data version mismatch: db had older data; unloading", tags...)
+		log.ErrorWithCode(m.logger, errorcode.MatchingUserDataVersionMismatch, "user data version mismatch: db had older data; unloading", nil, tags...)
 		return errUserDataVersionMismatch
 	}
 
@@ -449,7 +450,7 @@ func (m *userDataManagerImpl) UpdateUserData(ctx context.Context, options UserDa
 		UserData:    newData.GetData(),
 	})
 	if err != nil {
-		m.logger.Error("Failed to publish a replication task after updating task queue user data", tag.Error(err))
+		log.ErrorWithCode(m.logger, errorcode.MatchingReplicationTaskPublishFailed, "Failed to publish a replication task after updating task queue user data", err)
 		return 0, serviceerror.NewUnavailable("storing task queue user data succeeded but publishing to the namespace replication queue failed, please try again")
 	}
 	return newData.GetVersion(), nil
@@ -492,7 +493,7 @@ func (m *userDataManagerImpl) updateUserData(
 		return userData, false, err
 	}
 	if err != nil {
-		m.logger.Error("user data update function failed", tag.Error(err), tag.NewStringTag("user-data-update-source", options.Source))
+		log.ErrorWithCode(m.logger, errorcode.MatchingUserDataUpdateFailed, "user data update function failed", err, tag.NewStringTag("user-data-update-source", options.Source))
 		return nil, false, err
 	}
 
@@ -522,7 +523,7 @@ func (m *userDataManagerImpl) updateUserData(
 		BuildIdsRemoved: removed,
 	})
 	if err != nil {
-		m.logger.Error("failed to push new user data to owning matching node for namespace", tag.Error(err))
+		log.ErrorWithCode(m.logger, errorcode.MatchingUserDataPushFailed, "failed to push new user data to owning matching node for namespace", err)
 		return nil, false, err
 	}
 
@@ -575,7 +576,7 @@ func (m *userDataManagerImpl) HandleGetUserDataRequest(
 			// This is highly unlikely to happen in the owner/root partition but may happen
 			// due to an edge case in during ownership transfer.
 			// We rely on client retries in this case to let the system eventually self-heal.
-			m.logger.Error("requested task queue user data for version greater than known version",
+			log.ErrorWithCode(m.logger, errorcode.MatchingUserDataVersionExceeded, "requested task queue user data for version greater than known version", nil,
 				tag.NewInt64("request-known-version", version),
 				tag.UserDataVersion(userData.Version),
 			)

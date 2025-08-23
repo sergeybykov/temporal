@@ -16,6 +16,7 @@ import (
 	persistencespb "go.temporal.io/server/api/persistence/v1"
 	taskqueuespb "go.temporal.io/server/api/taskqueue/v1"
 	"go.temporal.io/server/common/cache"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -769,8 +770,7 @@ func (pm *taskQueuePartitionManagerImpl) ForceLoadAllNonRootPartitions() {
 				},
 			})
 			if err != nil {
-				pm.logger.Error("Failed to force load non-root partition after root partition was loaded",
-					tag.Error(err))
+				log.ErrorWithCode(pm.logger, errorcode.MatchingPartitionForceLoadFailed, "Failed to force load non-root partition after root partition was loaded", err)
 				return
 			}
 

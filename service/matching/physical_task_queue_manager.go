@@ -21,6 +21,7 @@ import (
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/debug"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -617,7 +618,7 @@ func (c *physicalTaskQueueManagerImpl) ensureRegisteredInDeploymentVersion(
 		// release the lock
 		case c.deploymentRegistrationCh <- struct{}{}:
 		default:
-			c.logger.Error("deploymentRegistrationCh is already unlocked")
+			log.ErrorWithCode(c.logger, errorcode.MatchingDeploymentRegistrationError, "deploymentRegistrationCh is already unlocked", nil)
 		}
 	}()
 
@@ -661,7 +662,7 @@ func (c *physicalTaskQueueManagerImpl) ensureRegisteredInDeploymentVersion(
 			err = errMaxDeploymentsInNamespace
 		} else {
 			// Do not surface low level error to user
-			c.logger.Error("error while registering version", tag.Error(err))
+			log.ErrorWithCode(c.logger, errorcode.MatchingDeploymentVersionRegistrationError, "error while registering version", err)
 			err = errDeploymentVersionNotReady
 		}
 		// Before retrying the error, hold the poller for some time so it does not retry immediately
@@ -684,7 +685,7 @@ func (c *physicalTaskQueueManagerImpl) ensureRegisteredInDeploymentVersion(
 		select {
 		case <-userDataChanged:
 		case <-ctx.Done():
-			c.logger.Error("timed out waiting for worker deployment version to appear in user data")
+			log.ErrorWithCode(c.logger, errorcode.MatchingDeploymentVersionWaitTimeout, "timed out waiting for worker deployment version to appear in user data", nil)
 			return ctx.Err()
 		}
 	}
