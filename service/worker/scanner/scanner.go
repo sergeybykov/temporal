@@ -20,6 +20,7 @@ import (
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/membership"
 	"go.temporal.io/server/common/metrics"
 	"go.temporal.io/server/common/namespace"
@@ -267,7 +268,7 @@ func (s *Scanner) startWorkflow(
 		if _, ok := err.(*serviceerror.WorkflowExecutionAlreadyStarted); ok {
 			return nil
 		}
-		s.context.logger.Error("error starting workflow", tag.WorkflowType(workflowType), tag.Error(err))
+		s.context.logger.Error("error starting workflow", tag.WorkflowType(workflowType), tag.Error(err), tag.ErrorCode(errorcode.WorkflowStartError))
 		return err
 	}
 	s.context.logger.Info("workflow successfully started", tag.WorkflowType(workflowType))

@@ -15,6 +15,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -216,7 +217,7 @@ func (s *Scavenger) filterTask(
 
 	namespaceID, workflowID, runID, err := persistence.SplitHistoryGarbageCleanupInfo(branch.Info)
 	if err != nil {
-		s.logger.Error("unable to parse the history cleanup info", tag.DetailInfo(branch.Info), tag.Error(err))
+		s.logger.Error("unable to parse the history cleanup info", tag.DetailInfo(branch.Info), tag.Error(err), tag.ErrorCode(errorcode.WorkerScannerHistoryScavengingFailed))
 		metrics.HistoryScavengerErrorCount.With(s.metricsHandler).Record(1)
 
 		s.Lock()
@@ -228,7 +229,7 @@ func (s *Scavenger) filterTask(
 
 	branchToken, err := serialization.HistoryBranchToBlob(branch.BranchInfo)
 	if err != nil {
-		s.logger.Error("unable to serialize the history branch token", tag.DetailInfo(branch.Info), tag.Error(err))
+		s.logger.Error("unable to serialize the history branch token", tag.DetailInfo(branch.Info), tag.Error(err), tag.ErrorCode(errorcode.WorkerScannerHistoryScavengingFailed))
 		metrics.HistoryScavengerErrorCount.With(s.metricsHandler).Record(1)
 
 		s.Lock()
@@ -268,7 +269,7 @@ func (s *Scavenger) handleTask(
 	case *serviceerror.NotFound, *serviceerror.NamespaceNotFound:
 		// case handled below
 	default:
-		s.logger.Error("encounter error when describing the mutable state", getTaskLoggingTags(err, task)...)
+		s.logger.Error("encounter error when describing the mutable state", append(getTaskLoggingTags(err, task), tag.ErrorCode(errorcode.WorkerScannerHistoryScavengingFailed))...)
 		return err
 	}
 
@@ -278,7 +279,7 @@ func (s *Scavenger) handleTask(
 		BranchToken: task.branchToken,
 	})
 	if err != nil {
-		s.logger.Error("encountered error when deleting garbage history branch", getTaskLoggingTags(err, task)...)
+		s.logger.Error("encountered error when deleting garbage history branch", append(getTaskLoggingTags(err, task), tag.ErrorCode(errorcode.WorkerScannerHistoryScavengingFailed))...)
 	} else {
 		s.logger.Info("deleted history garbage", getTaskLoggingTags(nil, task)...)
 	}

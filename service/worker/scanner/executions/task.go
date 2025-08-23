@@ -12,6 +12,7 @@ import (
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -97,7 +98,7 @@ func (t *task) Run() executor.TaskStatus {
 		if err != nil {
 			metrics.ScavengerValidationSkipsCount.With(t.metricsHandler).Record(1)
 			// break out of the loop when pagination fails
-			t.logger.Error("unable to paginate concrete execution", tag.ShardID(t.shardID), tag.Error(err))
+			t.logger.Error("unable to paginate concrete execution", tag.ShardID(t.shardID), tag.Error(err), tag.ErrorCode(errorcode.WorkerScannerExecutionTaskProcessingFailed))
 			retryTask = true
 			break
 		}
@@ -120,7 +121,8 @@ func (t *task) Run() executor.TaskStatus {
 				tag.Error(err),
 				tag.WorkflowNamespaceID(executionInfo.GetNamespaceId()),
 				tag.WorkflowID(executionInfo.GetWorkflowId()),
-				tag.WorkflowRunID(mutableState.GetExecutionState().GetRunId()))
+				tag.WorkflowRunID(mutableState.GetExecutionState().GetRunId()),
+				tag.ErrorCode(errorcode.WorkerScannerExecutionTaskProcessingFailed))
 			retryTask = true
 		}
 	}
@@ -155,6 +157,7 @@ func (t *task) validate(
 			tag.WorkflowID(mutableState.GetExecutionInfo().GetWorkflowId()),
 			tag.WorkflowRunID(mutableState.GetExecutionState().GetRunId()),
 			tag.Error(err),
+			tag.ErrorCode(errorcode.WorkerScannerExecutionTaskProcessingFailed),
 		)
 	} else {
 		results = append(results, validationResults...)
@@ -176,6 +179,7 @@ func (t *task) validate(
 				tag.WorkflowID(mutableState.GetExecutionInfo().GetWorkflowId()),
 				tag.WorkflowRunID(mutableState.GetExecutionState().GetRunId()),
 				tag.Error(err),
+				tag.ErrorCode(errorcode.WorkerScannerExecutionTaskProcessingFailed),
 			)
 		} else {
 			results = append(results, validationResults...)
@@ -215,7 +219,7 @@ func (t *task) handleFailures(
 			switch err.(type) {
 			case *serviceerror.NotFound,
 				*serviceerror.NamespaceNotFound:
-				t.logger.Error("Garbage data in DB after namespace is deleted", tag.WorkflowNamespaceID(executionInfo.GetNamespaceId()))
+				t.logger.Error("Garbage data in DB after namespace is deleted", tag.WorkflowNamespaceID(executionInfo.GetNamespaceId()), tag.ErrorCode(errorcode.WorkerScannerExecutionTaskProcessingFailed))
 				// We cannot do much in this case. It just ignores this error.
 				return nil
 			case nil:

@@ -11,6 +11,8 @@ import (
 	"go.temporal.io/server/api/matchingservice/v1"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/resource"
+	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 )
 
 type (
@@ -81,7 +83,7 @@ func (a *Activities) SyncUnversionedRamp(
 				Operation:      &matchingservice.SyncDeploymentUserDataRequest_UpdateVersionData{UpdateVersionData: syncData.Data},
 			})
 			if err != nil {
-				logger.Error("syncing task queue userdata", "taskQueue", syncData.Name, "types", syncData.Types, "error", err)
+				logger.Error("syncing task queue userdata", "taskQueue", syncData.Name, "types", syncData.Types, "error", err, tag.ErrorCode(errorcode.TaskQueueUserDataSyncFailed))
 			} else {
 				lock.Lock()
 				maxVersionByTQName[syncData.Name] = max(maxVersionByTQName[syncData.Name], res.Version)
@@ -111,7 +113,7 @@ func (a *Activities) CheckUnversionedRampUserDataPropagation(ctx context.Context
 				Version:     version,
 			})
 			if err != nil {
-				logger.Error("waiting for unversioned ramp userdata propagation", "taskQueue", name, "type", version, "error", err)
+				logger.Error("waiting for unversioned ramp userdata propagation", "taskQueue", name, "type", version, "error", err, tag.ErrorCode(errorcode.TaskQueueUserDataWaitFailed))
 			}
 			errs <- err
 		}(n, v)
@@ -218,7 +220,7 @@ func (a *Activities) SyncDeploymentVersionUserDataFromWorkerDeployment(
 			}
 
 			if err != nil {
-				logger.Error("syncing task queue userdata", "taskQueue", syncData.Name, "types", syncData.Types, "error", err)
+				logger.Error("syncing task queue userdata", "taskQueue", syncData.Name, "types", syncData.Types, "error", err, tag.ErrorCode(errorcode.TaskQueueUserDataSyncFailed))
 			} else {
 				lock.Lock()
 				maxVersionByName[syncData.Name] = max(maxVersionByName[syncData.Name], res.Version)

@@ -16,6 +16,7 @@ import (
 	"go.temporal.io/server/common/dynamicconfig"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/persistence"
 	"go.temporal.io/server/common/persistence/visibility/manager"
@@ -195,6 +196,7 @@ func (a *Activities) processNamespaceEntry(
 				}
 				// Intentionally don't fail the activity on other single entry errors.
 				a.logger.Error("Failed to update task queue user data",
+					tag.ErrorCode(errorcode.TaskQueueUserDataUpdateFailed),
 					tag.WorkflowNamespace(ns.Name().String()),
 					tag.WorkflowTaskQueueName(entry.TaskQueue),
 					tag.Error(err))

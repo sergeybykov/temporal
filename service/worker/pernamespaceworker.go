@@ -19,6 +19,7 @@ import (
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/cluster"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -178,7 +179,7 @@ func (wm *perNamespaceWorkerManager) Stop() {
 	wm.namespaceRegistry.UnregisterStateChangeCallback(wm)
 	err := wm.serviceResolver.RemoveListener(perNamespaceWorkerManagerListenerKey)
 	if err != nil {
-		wm.logger.Error("Unable to unregister membership listener", tag.Error(err))
+		log.ErrorWithCode(wm.logger, errorcode.WorkerMembershipListenerUnregisterFailed, "Unable to unregister membership listener", err)
 	}
 	close(wm.membershipChangedCh)
 
@@ -339,7 +340,7 @@ func (w *perNamespaceWorker) handleError(err error) {
 
 	if w.retryTimer != nil {
 		// this shouldn't ever happen
-		w.logger.Error("bug: handleError found existing timer")
+		log.ErrorWithCode(w.logger, errorcode.WorkerExistingTimerFoundError, "bug: handleError found existing timer", nil)
 		return
 	}
 
@@ -351,7 +352,7 @@ func (w *perNamespaceWorker) handleError(err error) {
 	} else {
 		sleep = w.retrier.NextBackOff(err)
 		if sleep < 0 {
-			w.logger.Error("Failed to start sdk worker, out of retries", tag.Error(err))
+			log.ErrorWithCode(w.logger, errorcode.WorkerSDKStartFailedOutOfRetries, "Failed to start sdk worker, out of retries", err)
 			return
 		}
 		w.logger.Warn("Failed to start sdk worker", tag.Error(err), tag.NewDurationTag("sleep", sleep))
@@ -400,7 +401,7 @@ func (w *perNamespaceWorker) refresh(args refreshArgs) (retErr error) {
 	// check if we are responsible for this namespace at all
 	workerAllocation, err := w.getWorkerAllocation(args)
 	if err != nil {
-		w.logger.Error("Failed to look up hosts", tag.Error(err))
+		log.ErrorWithCode(w.logger, errorcode.WorkerHostLookupFailed, "Failed to look up hosts", err)
 		// TODO: add metric also
 		return err
 	}
@@ -524,7 +525,7 @@ func (w *perNamespaceWorker) onFatalError(err error) {
 		// other sdk fatal errors:
 		// serviceerror.InvalidArgument
 		// serviceerror.ClientVersionNotSupported
-		w.logger.Error("sdk worker got non-retryable error, not restarting", tag.Error(err))
+		log.ErrorWithCode(w.logger, errorcode.WorkerSDKNonRetryableError, "sdk worker got non-retryable error, not restarting", err)
 	}
 }
 

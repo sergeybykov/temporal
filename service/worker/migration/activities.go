@@ -21,6 +21,7 @@ import (
 	serverClient "go.temporal.io/server/client"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -504,7 +505,7 @@ func (a *activities) GenerateReplicationTasks(ctx context.Context, request *gene
 
 	namespaceName, err := a.namespaceRegistry.GetNamespaceName(namespace.ID(request.NamespaceID))
 	if err != nil {
-		a.logger.Error("force-replication failed to translate namespaceID to name", tag.WorkflowNamespaceID(request.NamespaceID))
+		a.logger.Error("force-replication failed to translate namespaceID to name", tag.WorkflowNamespaceID(request.NamespaceID), tag.ErrorCode(errorcode.WorkerMigrationActivityExecutionFailed))
 		return err
 	}
 
@@ -522,10 +523,12 @@ func (a *activities) GenerateReplicationTasks(ctx context.Context, request *gene
 		); err != nil {
 			if !common.IsNotFoundError(err) {
 				a.logger.Error("force-replication failed to generate replication task",
+					tag.ErrorCode(errorcode.ReplicationTaskGenerationFailed),
 					tag.WorkflowNamespaceID(request.NamespaceID),
 					tag.WorkflowID(we.GetWorkflowId()),
 					tag.WorkflowRunID(we.GetRunId()),
-					tag.Error(err))
+					tag.Error(err),
+					tag.ErrorCode(errorcode.WorkerMigrationActivityExecutionFailed))
 				return err
 			}
 
@@ -548,8 +551,10 @@ func (a *activities) setCallerInfoForServerAPI(
 	nsName, err := a.namespaceRegistry.GetNamespaceName(namespaceID)
 	if err != nil {
 		a.logger.Error("Failed to get namespace name when generating replication task",
+			tag.ErrorCode(errorcode.NamespaceGetForReplicationFailed),
 			tag.WorkflowNamespaceID(namespaceID.String()),
 			tag.Error(err),
+			tag.ErrorCode(errorcode.WorkerMigrationActivityExecutionFailed),
 		)
 		nsName = namespace.EmptyName
 	}
@@ -600,7 +605,7 @@ func (a *activities) SeedReplicationQueueWithUserDataEntries(ctx context.Context
 		}
 		response, err := a.taskManager.ListTaskQueueUserDataEntries(ctx, request)
 		if err != nil {
-			a.logger.Error("List task queue user data failed", tag.WorkflowNamespaceID(request.NamespaceID), tag.Error(err))
+			a.logger.Error("List task queue user data failed", tag.WorkflowNamespaceID(request.NamespaceID), tag.Error(err), tag.ErrorCode(errorcode.WorkerMigrationActivityExecutionFailed))
 			return err
 		}
 		for idx, entry := range response.Entries {
@@ -620,7 +625,7 @@ func (a *activities) SeedReplicationQueueWithUserDataEntries(ctx context.Context
 				},
 			})
 			if err != nil {
-				a.logger.Error("Inserting into namespace replication queue failed", tag.WorkflowNamespaceID(request.NamespaceID), tag.Error(err))
+				a.logger.Error("Inserting into namespace replication queue failed", tag.WorkflowNamespaceID(request.NamespaceID), tag.Error(err), tag.ErrorCode(errorcode.WorkerMigrationActivityExecutionFailed))
 				return err
 			}
 		}

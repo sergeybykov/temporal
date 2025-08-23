@@ -10,6 +10,7 @@ import (
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/server/api/historyservice/v1"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -101,7 +102,7 @@ func (a *LocalActivities) GetNextPageTokenActivity(ctx context.Context, params G
 
 	resp, err := a.visibilityManager.ListWorkflowExecutions(ctx, req)
 	if err != nil {
-		a.logger.Error("Unable to list all workflows to get next page token.", tag.WorkflowNamespace(params.Namespace.String()), tag.WorkflowNamespaceID(params.NamespaceID.String()), tag.Error(err))
+		a.logger.Error("Unable to list all workflows to get next page token.", tag.WorkflowNamespace(params.Namespace.String()), tag.WorkflowNamespaceID(params.NamespaceID.String()), tag.Error(err), tag.ErrorCode(errorcode.WorkerDeleteNamespaceExecutionsFailed))
 		return nil, err
 	}
 
@@ -161,7 +162,7 @@ func (a *Activities) DeleteExecutionsActivity(ctx context.Context, params Delete
 	}
 	resp, err := a.visibilityManager.ListWorkflowExecutions(ctx, req)
 	if err != nil {
-		logger.Error("Unable to list all workflow executions.", tag.Error(err))
+		logger.Error("Unable to list all workflow executions.", tag.Error(err), tag.ErrorCode(errorcode.WorkerDeleteNamespaceExecutionsFailed))
 		return result, err
 	}
 	var rateLimiter *quotas.RateLimiterImpl
@@ -176,7 +177,7 @@ func (a *Activities) DeleteExecutionsActivity(ctx context.Context, params Delete
 	for _, execution := range resp.Executions {
 		err = rateLimiter.Wait(ctx)
 		if err != nil {
-			logger.Error("Workflow executions delete rate limiter error.", tag.Error(err))
+			logger.Error("Workflow executions delete rate limiter error.", tag.Error(err), tag.ErrorCode(errorcode.WorkerDeleteNamespaceExecutionsFailed))
 			return result, fmt.Errorf("rate limiter error: %w", err)
 		}
 		_, err = a.historyClient.DeleteWorkflowExecution(ctx, &historyservice.DeleteWorkflowExecutionRequest{
@@ -202,7 +203,7 @@ func (a *Activities) DeleteExecutionsActivity(ctx context.Context, params Delete
 		default:
 			result.ErrorCount++
 			metrics.DeleteExecutionsFailureCount.With(a.metricsHandler.WithTags(metrics.NamespaceTag(params.Namespace.String()))).Record(1)
-			logger.Error("Unable to delete workflow execution.", tag.WorkflowID(execution.Execution.GetWorkflowId()), tag.WorkflowRunID(execution.Execution.GetRunId()), tag.Error(err))
+			logger.Error("Unable to delete workflow execution.", tag.WorkflowID(execution.Execution.GetWorkflowId()), tag.WorkflowRunID(execution.Execution.GetRunId()), tag.Error(err), tag.ErrorCode(errorcode.WorkerDeleteNamespaceExecutionsFailed))
 		}
 		select {
 		case progressCh <- result:
@@ -240,11 +241,11 @@ func (a *Activities) deleteWorkflowExecutionFromVisibility(
 		return 1, 0
 	case *serviceerror.NotFound:
 		// Indicates that someone else deleted workflow execution.
-		logger.Error("Workflow execution is not found in visibility store.")
+		logger.Error("Workflow execution is not found in visibility store.", tag.ErrorCode(errorcode.WorkerDeleteNamespaceExecutionsFailed))
 		return 0, 0
 	default:
 		metrics.DeleteExecutionsFailureCount.With(a.metricsHandler.WithTags(metrics.NamespaceTag(nsName.String()))).Record(1)
-		logger.Error("Unable to delete workflow execution from visibility store.", tag.Error(err))
+		logger.Error("Unable to delete workflow execution from visibility store.", tag.Error(err), tag.ErrorCode(errorcode.WorkerDeleteNamespaceExecutionsFailed))
 		return 0, 1
 	}
 }

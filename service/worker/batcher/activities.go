@@ -21,6 +21,7 @@ import (
 	batchspb "go.temporal.io/server/api/batch/v1"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 	"go.temporal.io/server/common/metrics"
@@ -234,7 +235,7 @@ func (a *activities) processWorkflowsWithProactiveFetching(
 
 		case <-ctx.Done():
 			metrics.BatcherOperationFailures.With(metricsHandler).Record(1)
-			logger.Error("Failed to complete batch operation", tag.Error(ctx.Err()))
+			logger.Error("Failed to complete batch operation", tag.Error(ctx.Err()), tag.ErrorCode(errorcode.WorkerBatchOperationCompletionFailed))
 			return HeartBeatDetails{}, ctx.Err()
 		}
 
@@ -279,7 +280,7 @@ func (a *activities) BatchActivity(ctx context.Context, batchParams BatchParams)
 
 	if err := a.checkNamespace(batchParams.Namespace); err != nil {
 		metrics.BatcherOperationFailures.With(metricsHandler).Record(1)
-		logger.Error("Failed to run batch operation due to namespace mismatch", tag.Error(err))
+		logger.Error("Failed to run batch operation due to namespace mismatch", tag.Error(err), tag.ErrorCode(errorcode.WorkerBatchOperationNamespaceMismatch))
 		return hbd, err
 	}
 
@@ -287,7 +288,7 @@ func (a *activities) BatchActivity(ctx context.Context, batchParams BatchParams)
 	if b := batchParams.ResetParams.ResetOptions; b != nil {
 		batchParams.ResetParams.resetOptions = &commonpb.ResetOptions{}
 		if err := batchParams.ResetParams.resetOptions.Unmarshal(b); err != nil {
-			logger.Error("Failed to deserialize batch reset options", tag.Error(err))
+			logger.Error("Failed to deserialize batch reset options", tag.Error(err), tag.ErrorCode(errorcode.WorkerBatchResetOptionsDeserializationFailed))
 			return hbd, err
 		}
 	}
@@ -298,7 +299,7 @@ func (a *activities) BatchActivity(ctx context.Context, batchParams BatchParams)
 		for i, serializedOp := range postOps {
 			op := &workflowpb.PostResetOperation{}
 			if err := op.Unmarshal(serializedOp); err != nil {
-				logger.Error("Failed to deserialize batch post reset operation", tag.Error(err))
+				logger.Error("Failed to deserialize batch post reset operation", tag.Error(err), tag.ErrorCode(errorcode.WorkerBatchPostResetOperationDeserializationFailed))
 				return hbd, err
 			}
 			batchParams.ResetParams.postResetOperations[i] = op
@@ -314,7 +315,7 @@ func (a *activities) BatchActivity(ctx context.Context, batchParams BatchParams)
 		if err := activity.GetHeartbeatDetails(ctx, &hbd); err == nil {
 			startOver = false
 		} else {
-			logger.Error("Failed to recover from last heartbeat, start over from beginning", tag.Error(err))
+			logger.Error("Failed to recover from last heartbeat, start over from beginning", tag.Error(err), tag.ErrorCode(errorcode.WorkerBatchHeartbeatRecoveryFailed))
 		}
 	}
 
@@ -328,7 +329,7 @@ func (a *activities) BatchActivity(ctx context.Context, batchParams BatchParams)
 			})
 			if err != nil {
 				metrics.BatcherOperationFailures.With(metricsHandler).Record(1)
-				logger.Error("Failed to get estimate workflow count", tag.Error(err))
+				logger.Error("Failed to get estimate workflow count", tag.Error(err), tag.ErrorCode(errorcode.WorkerBatchWorkflowCountEstimationFailed))
 				return HeartBeatDetails{}, err
 			}
 			estimateCount = resp.GetCount()
@@ -372,7 +373,7 @@ func (a *activities) BatchActivityWithProtobuf(ctx context.Context, batchParams 
 
 	if err := a.checkNamespaceID(batchParams.NamespaceId); err != nil {
 		metrics.BatcherOperationFailures.With(metricsHandler).Record(1)
-		logger.Error("Failed to run batch operation due to namespace mismatch", tag.Error(err))
+		logger.Error("Failed to run batch operation due to namespace mismatch", tag.Error(err), tag.ErrorCode(errorcode.WorkerBatchOperationNamespaceMismatch))
 		return hbd, err
 	}
 
@@ -385,7 +386,7 @@ func (a *activities) BatchActivityWithProtobuf(ctx context.Context, batchParams 
 		if err := activity.GetHeartbeatDetails(ctx, &hbd); err == nil {
 			startOver = false
 		} else {
-			logger.Error("Failed to recover from last heartbeat, start over from beginning", tag.Error(err))
+			logger.Error("Failed to recover from last heartbeat, start over from beginning", tag.Error(err), tag.ErrorCode(errorcode.WorkerBatchHeartbeatRecoveryFailed))
 		}
 	}
 
@@ -399,7 +400,7 @@ func (a *activities) BatchActivityWithProtobuf(ctx context.Context, batchParams 
 			})
 			if err != nil {
 				metrics.BatcherOperationFailures.With(metricsHandler).Record(1)
-				logger.Error("Failed to get estimate workflow count", tag.Error(err))
+				logger.Error("Failed to get estimate workflow count", tag.Error(err), tag.ErrorCode(errorcode.WorkerBatchWorkflowCountEstimationFailed))
 				return HeartBeatDetails{}, err
 			}
 			estimateCount = resp.GetCount()
@@ -675,7 +676,7 @@ func startTaskProcessor(
 			}
 			if err != nil {
 				metrics.BatcherProcessorFailures.With(metricsHandler).Record(1)
-				logger.Error("Failed to process batch operation task", tag.Error(err))
+				logger.Error("Failed to process batch operation task", tag.Error(err), tag.ErrorCode(errorcode.WorkerBatchOperationTaskProcessingFailed))
 
 				_, ok := batchParams._nonRetryableErrors[err.Error()]
 				if ok || task.attempts > batchParams.AttemptsOnRetryableError {
@@ -881,7 +882,7 @@ func startTaskProcessorProtobuf(
 			}
 			if err != nil {
 				metrics.BatcherProcessorFailures.With(metricsHandler).Record(1)
-				logger.Error("Failed to process batch operation task", tag.Error(err))
+				logger.Error("Failed to process batch operation task", tag.Error(err), tag.ErrorCode(errorcode.WorkerBatchOperationTaskProcessingFailed))
 				nonRetryable := slices.Contains(batchOperation.NonRetryableErrors, err.Error())
 				if nonRetryable || task.attempts > int(batchOperation.AttemptsOnRetryableError) {
 					respCh <- taskResponse{err: err, page: task.page}
@@ -989,7 +990,7 @@ func getLastWorkflowTaskEventID(
 	for {
 		resp, err := frontendClient.GetWorkflowExecutionHistoryReverse(ctx, req)
 		if err != nil {
-			logger.Error("failed to run GetWorkflowExecutionHistoryReverse", tag.Error(err))
+			logger.Error("failed to run GetWorkflowExecutionHistoryReverse", tag.Error(err), tag.ErrorCode(errorcode.WorkerBatchWorkflowHistoryReverseReadFailed))
 			return 0, errors.New("failed to get workflow execution history")
 		}
 		for _, e := range resp.GetHistory().GetEvents() {
@@ -1029,7 +1030,7 @@ func getFirstWorkflowTaskEventID(
 	for {
 		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
 		if err != nil {
-			logger.Error("failed to run GetWorkflowExecutionHistory", tag.Error(err))
+			logger.Error("failed to run GetWorkflowExecutionHistory", tag.Error(err), tag.ErrorCode(errorcode.WorkerBatchWorkflowHistoryReadFailed))
 			return 0, errors.New("GetWorkflowExecutionHistory failed")
 		}
 		for _, e := range resp.GetHistory().GetEvents() {

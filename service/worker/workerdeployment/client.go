@@ -25,6 +25,7 @@ import (
 	"go.temporal.io/server/common/dynamicconfig"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/payload"
 	"go.temporal.io/server/common/persistence/visibility/manager"
@@ -1343,6 +1344,7 @@ func (d *ClientImpl) record(operation string, retErr *error, args ...any) func()
 				)
 			} else {
 				d.logger.Error("deployment client error",
+					tag.ErrorCode(errorcode.DeploymentClientError),
 					tag.Error(*retErr),
 					tag.Operation(operation),
 					tag.NewDurationTag("elapsed", elapsed),
@@ -1626,7 +1628,7 @@ func (d *ClientImpl) isTaskQueueExpectedInNewVersion(
 	}
 	response, err = d.matchingClient.DescribeTaskQueue(ctx, req)
 	if err != nil {
-		d.logger.Error("error fetching AddRate for task-queue", tag.Error(err))
+		d.logger.Error("error fetching AddRate for task-queue", tag.Error(err), tag.ErrorCode(errorcode.TaskQueueAddRateFetchError))
 		return false, err
 	}
 

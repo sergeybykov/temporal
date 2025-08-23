@@ -13,6 +13,7 @@ import (
 	replicationspb "go.temporal.io/server/api/replication/v1"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -142,7 +143,7 @@ func (p *replicationMessageProcessor) handleReplicationTasks() {
 	defer cancel()
 
 	if err != nil {
-		p.logger.Error("Failed to get replication tasks", tag.Error(err))
+		log.ErrorWithCode(p.logger, errorcode.WorkerReplicationTasksFetchFailed, "Failed to get replication tasks", err)
 		return
 	}
 
@@ -158,14 +159,14 @@ func (p *replicationMessageProcessor) handleReplicationTasks() {
 
 		if err != nil {
 			metrics.ReplicatorFailures.With(p.metricsHandler).Record(1)
-			p.logger.Error("Failed to apply replication tasks", tag.Error(err))
+			log.ErrorWithCode(p.logger, errorcode.WorkerReplicationTasksApplyFailed, "Failed to apply replication tasks", err)
 
 			dlqErr := backoff.ThrottleRetry(func() error {
 
 				return p.putNamespaceReplicationTaskToDLQ(taskCtx, task)
 			}, p.retryPolicy, isTransientRetryableError)
 			if dlqErr != nil {
-				p.logger.Error("Failed to put replication tasks to DLQ", tag.Error(dlqErr))
+				log.ErrorWithCode(p.logger, errorcode.WorkerReplicationTasksDLQPutFailed, "Failed to put replication tasks to DLQ", dlqErr)
 				metrics.ReplicatorDLQFailures.With(p.metricsHandler).Record(1)
 				return
 			}
@@ -221,18 +222,16 @@ func (p *replicationMessageProcessor) handleReplicationTask(
 		attr := task.GetNamespaceTaskAttributes()
 		err := p.namespaceTaskExecutor.Execute(ctx, attr)
 		if err != nil {
-			p.logger.Error("unable to process namespace replication task",
-				tag.WorkflowNamespaceID(attr.Id),
-				tag.Error(err))
+			log.ErrorWithCode(p.logger, errorcode.WorkerNamespaceReplicationTaskProcessingFailed, "unable to process namespace replication task", err,
+				tag.WorkflowNamespaceID(attr.Id))
 		}
 		return err
 	case enumsspb.REPLICATION_TASK_TYPE_TASK_QUEUE_USER_DATA:
 		attr := task.GetTaskQueueUserDataAttributes()
 		err := p.handleTaskQueueUserDataReplicationTask(ctx, attr)
 		if err != nil {
-			p.logger.Error(fmt.Sprintf("unable to process task queue metadata replication task, %v", attr.TaskQueueName),
-				tag.WorkflowNamespaceID(attr.NamespaceId),
-				tag.Error(err))
+			log.ErrorWithCode(p.logger, errorcode.WorkerTaskQueueUserDataReplicationTaskProcessingFailed, fmt.Sprintf("unable to process task queue metadata replication task, %v", attr.TaskQueueName), err,
+				tag.WorkflowNamespaceID(attr.NamespaceId))
 		}
 		return err
 	default:

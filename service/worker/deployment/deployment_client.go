@@ -19,6 +19,7 @@ import (
 	"go.temporal.io/server/common/dynamicconfig"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/payload"
 	"go.temporal.io/server/common/persistence/visibility/manager"
@@ -750,6 +751,7 @@ func (d *DeploymentClientImpl) record(operation string, retErr *error, args ...a
 				tag.Error(*retErr),
 				tag.Operation(operation),
 				tag.NewDurationTag("elapsed", elapsed),
+				tag.ErrorCode(errorcode.DeploymentClientError),
 				tag.NewAnyTag("args", args),
 			)
 		} else {

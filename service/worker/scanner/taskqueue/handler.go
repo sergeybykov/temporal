@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/errorcode"
 	p "go.temporal.io/server/common/persistence"
 	"go.temporal.io/server/service/matching"
 	"go.temporal.io/server/service/worker/scanner/executor"
@@ -95,7 +96,7 @@ func (s *Scavenger) tryDeleteTaskQueue(key *p.TaskQueueKey, state *taskQueueStat
 	//     do so by updating the rangeID
 	//   - deleteTaskQueue is a conditional delete where condition is the rangeID
 	if err := s.deleteTaskQueue(s.lifecycleCtx, key, state.rangeID); err != nil {
-		s.logger.Error("deleteTaskQueue error", tag.Error(err))
+		s.logger.Error("deleteTaskQueue error", tag.Error(err), tag.ErrorCode(errorcode.TaskQueueDeleteError))
 		return
 	}
 	atomic.AddInt64(&s.stats.taskqueue.nDeleted, 1)
@@ -107,7 +108,7 @@ func (s *Scavenger) deleteHandlerLog(key *p.TaskQueueKey, state *taskQueueState,
 	atomic.AddInt64(&s.stats.task.nProcessed, int64(nProcessed))
 	if err != nil {
 		s.logger.Error("scavenger.deleteHandler processed.",
-			tag.Error(err), tag.WorkflowNamespaceID(key.NamespaceID), tag.WorkflowTaskQueueName(key.TaskQueueName), tag.WorkflowTaskQueueType(key.TaskQueueType), tag.NumberProcessed(nProcessed), tag.NumberDeleted(nDeleted))
+			tag.Error(err), tag.WorkflowNamespaceID(key.NamespaceID), tag.WorkflowTaskQueueName(key.TaskQueueName), tag.WorkflowTaskQueueType(key.TaskQueueType), tag.NumberProcessed(nProcessed), tag.NumberDeleted(nDeleted), tag.ErrorCode(errorcode.ScavengerDeleteHandlerError))
 		return
 	}
 	if nProcessed > 0 {

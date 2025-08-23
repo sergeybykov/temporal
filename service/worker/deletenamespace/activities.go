@@ -11,6 +11,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -116,7 +117,7 @@ func (a *localActivities) ValidateNexusEndpointsActivity(ctx context.Context, ns
 			PageSize:              a.nexusEndpointListDefaultPageSize(),
 		})
 		if err != nil {
-			a.logger.Error("Unable to list Nexus endpoints from persistence.", tag.WorkflowNamespace(nsName.String()), tag.WorkflowNamespaceID(nsID.String()), tag.Error(err))
+			a.logger.Error("Unable to list Nexus endpoints from persistence.", tag.WorkflowNamespace(nsName.String()), tag.WorkflowNamespaceID(nsID.String()), tag.Error(err), tag.ErrorCode(errorcode.WorkerDeleteNamespaceActivitiesFailed))
 			return fmt.Errorf("unable to list Nexus endpoints for namespace %s: %w", nsName, err)
 		}
 
@@ -142,13 +143,13 @@ func (a *localActivities) MarkNamespaceDeletedActivity(ctx context.Context, nsNa
 
 	metadata, err := a.metadataManager.GetMetadata(ctx)
 	if err != nil {
-		a.logger.Error("Unable to get cluster metadata.", tag.WorkflowNamespace(nsName.String()), tag.Error(err))
+		a.logger.Error("Unable to get cluster metadata.", tag.WorkflowNamespace(nsName.String()), tag.Error(err), tag.ErrorCode(errorcode.WorkerDeleteNamespaceActivitiesFailed))
 		return err
 	}
 
 	ns, err := a.metadataManager.GetNamespace(ctx, getNamespaceRequest)
 	if err != nil {
-		a.logger.Error("Unable to get namespace details.", tag.WorkflowNamespace(nsName.String()), tag.Error(err))
+		a.logger.Error("Unable to get namespace details.", tag.WorkflowNamespace(nsName.String()), tag.Error(err), tag.ErrorCode(errorcode.WorkerDeleteNamespaceActivitiesFailed))
 		return err
 	}
 
@@ -162,7 +163,7 @@ func (a *localActivities) MarkNamespaceDeletedActivity(ctx context.Context, nsNa
 
 	err = a.metadataManager.UpdateNamespace(ctx, updateRequest)
 	if err != nil {
-		a.logger.Error("Unable to update namespace state to Deleted.", tag.WorkflowNamespace(nsName.String()), tag.Error(err))
+		a.logger.Error("Unable to update namespace state to Deleted.", tag.WorkflowNamespace(nsName.String()), tag.Error(err), tag.ErrorCode(errorcode.WorkerDeleteNamespaceActivitiesFailed))
 		return err
 	}
 	return nil
@@ -195,7 +196,7 @@ func (a *localActivities) GenerateDeletedNamespaceNameActivity(ctx context.Conte
 			logger.Info("Generated new name for deleted namespace.", tag.NewStringTag("wf-new-namespace", newName))
 			return namespace.Name(newName), nil
 		default:
-			logger.Error("Unable to get namespace details.", tag.Error(err))
+			logger.Error("Unable to get namespace details.", tag.Error(err), tag.ErrorCode(errorcode.WorkerDeleteNamespaceActivitiesFailed))
 			return namespace.EmptyName, fmt.Errorf("unable to get namespace details: %w", err)
 		}
 	}
@@ -218,7 +219,7 @@ func (a *localActivities) RenameNamespaceActivity(ctx context.Context, previousN
 
 	err := a.metadataManager.RenameNamespace(ctx, renameNamespaceRequest)
 	if err != nil {
-		a.logger.Error("Unable to rename namespace.", tag.WorkflowNamespace(previousName.String()), tag.Error(err))
+		a.logger.Error("Unable to rename namespace.", tag.WorkflowNamespace(previousName.String()), tag.Error(err), tag.ErrorCode(errorcode.WorkerDeleteNamespaceActivitiesFailed))
 		return err
 	}
 

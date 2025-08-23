@@ -6,6 +6,7 @@ import (
 
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/errorcode"
 	"go.temporal.io/server/common/headers"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -75,7 +76,7 @@ func (a *LocalActivities) CountExecutionsAdvVisibilityActivity(ctx context.Conte
 	}
 	resp, err := a.visibilityManager.CountWorkflowExecutions(ctx, req)
 	if err != nil {
-		logger.Error("Unable to count workflow executions.", tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.WorkerDeleteNamespaceReclaimResourcesFailed, "Unable to count workflow executions.", err)
 		return 0, err
 	}
 
@@ -101,7 +102,7 @@ func (a *Activities) EnsureNoExecutionsAdvVisibilityActivity(ctx context.Context
 	}
 	resp, err := a.visibilityManager.CountWorkflowExecutions(ctx, req)
 	if err != nil {
-		logger.Error("Unable to count workflow executions.", tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.WorkerDeleteNamespaceReclaimResourcesFailed, "Unable to count workflow executions.", err)
 		return err
 	}
 
@@ -112,7 +113,7 @@ func (a *Activities) EnsureNoExecutionsAdvVisibilityActivity(ctx context.Context
 		if activity.HasHeartbeatDetails(ctx) && activityInfo.Attempt > 7 {
 			var previousAttemptCount int
 			if err := activity.GetHeartbeatDetails(ctx, &previousAttemptCount); err != nil {
-				logger.Error("Unable to get previous heartbeat details.", tag.Error(err))
+				log.ErrorWithCode(logger, errorcode.WorkerDeleteNamespaceReclaimResourcesFailed, "Unable to get previous heartbeat details.", err)
 				return err
 			}
 			if count == previousAttemptCount {
@@ -150,7 +151,7 @@ func (a *LocalActivities) DeleteNamespaceActivity(ctx context.Context, nsID name
 
 	err := a.metadataManager.DeleteNamespaceByName(ctx, deleteNamespaceRequest)
 	if err != nil {
-		logger.Error("Unable to delete namespace from persistence.", tag.Error(err))
+		log.ErrorWithCode(logger, errorcode.WorkerDeleteNamespaceReclaimResourcesFailed, "Unable to delete namespace from persistence.", err)
 		return err
 	}
 

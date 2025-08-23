@@ -337,7 +337,7 @@ func (d *WorkflowRunner) handleRegisterWorker(ctx workflow.Context, args *deploy
 	// use lock to enforce only one update at a time
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", "error", err)
 		return serviceerror.NewDeadlineExceeded("Could not acquire workflow lock")
 	}
 	defer func() {
@@ -431,7 +431,7 @@ func (d *WorkflowRunner) handleSetRampingVersion(ctx workflow.Context, args *dep
 	// use lock to enforce only one update at a time
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", "error", err)
 		return nil, serviceerror.NewDeadlineExceeded("Could not acquire workflow lock")
 	}
 	defer func() {
@@ -625,7 +625,7 @@ func (d *WorkflowRunner) handleDeleteVersion(ctx workflow.Context, args *deploym
 	// use lock to enforce only one update at a time
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", "error", err)
 		return serviceerror.NewDeadlineExceeded("Could not acquire workflow lock")
 	}
 	defer func() {
@@ -670,7 +670,7 @@ func (d *WorkflowRunner) handleSetCurrent(ctx workflow.Context, args *deployment
 	// use lock to enforce only one update at a time
 	err := d.lock.Lock(ctx)
 	if err != nil {
-		d.logger.Error("Could not acquire workflow lock")
+		d.logger.Error("Could not acquire workflow lock", "error", err)
 		return nil, serviceerror.NewDeadlineExceeded("Could not acquire workflow lock")
 	}
 	defer func() {
